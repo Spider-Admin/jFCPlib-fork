@@ -17,19 +17,19 @@
 
 package net.pterodactylus.fcp;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static java.lang.String.format;
+import static java.lang.String.join;
+import static java.lang.System.currentTimeMillis;
+import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.joining;
 
 /**
  * Helper class with utility methods for the FCP protocol.
@@ -47,7 +47,7 @@ public class FcpUtils {
 	 * @return A unique identifier
 	 */
 	public static String getUniqueIdentifier() {
-		return new StringBuilder().append(System.currentTimeMillis()).append('-').append(counter.getAndIncrement()).toString();
+		return format("%d-%d", currentTimeMillis(), counter.getAndIncrement());
 	}
 
 	/**
@@ -60,14 +60,7 @@ public class FcpUtils {
 	 *             if a value can not be converted to a number
 	 */
 	public static int[] decodeMultiIntegerField(String field) throws NumberFormatException {
-		StringTokenizer fieldTokens = new StringTokenizer(field, ";");
-		int[] result = new int[fieldTokens.countTokens()];
-		int counter = 0;
-		while (fieldTokens.hasMoreTokens()) {
-			String fieldToken = fieldTokens.nextToken();
-			result[counter++] = Integer.valueOf(fieldToken);
-		}
-		return result;
+		return stream(field.split(";")).mapToInt(Integer::parseInt).toArray();
 	}
 
 	/**
@@ -79,14 +72,7 @@ public class FcpUtils {
 	 * @return The encoded values
 	 */
 	public static String encodeMultiIntegerField(int[] values) {
-		StringBuilder encodedField = new StringBuilder();
-		for (int value : values) {
-			if (encodedField.length() > 0) {
-				encodedField.append(';');
-			}
-			encodedField.append(value);
-		}
-		return encodedField.toString();
+		return stream(values).mapToObj(String::valueOf).collect(joining(";"));
 	}
 
 	/**
@@ -98,14 +84,7 @@ public class FcpUtils {
 	 * @return The encoded values
 	 */
 	public static String encodeMultiStringField(String[] values) {
-		StringBuilder encodedField = new StringBuilder();
-		for (String value : values) {
-			if (encodedField.length() > 0) {
-				encodedField.append(';');
-			}
-			encodedField.append(value);
-		}
-		return encodedField.toString();
+		return join(";", values);
 	}
 
 	/**
@@ -132,7 +111,7 @@ public class FcpUtils {
 	 */
 	public static int safeParseInt(String value, int defaultValue) {
 		try {
-			return Integer.valueOf(value);
+			return Integer.parseInt(value);
 		} catch (NumberFormatException nfe1) {
 			return defaultValue;
 		}
@@ -162,7 +141,7 @@ public class FcpUtils {
 	 */
 	public static long safeParseLong(String value, long defaultValue) {
 		try {
-			return Integer.valueOf(value);
+			return Long.parseLong(value);
 		} catch (NumberFormatException nfe1) {
 			return defaultValue;
 		}
@@ -271,200 +250,6 @@ public class FcpUtils {
 				remaining -= read;
 			}
 		}
-	}
-
-	/**
-	 * This input stream stores the content of another input stream either in a
-	 * file or in memory, depending on the length of the input stream.
-	 *
-	 * @author David ‘Bombe’ Roden &lt;bombe@freenetproject.org&gt;
-	 */
-	public static class TempInputStream extends InputStream {
-
-		/** The default maximum lenght for in-memory storage. */
-		public static final long MAX_LENGTH_MEMORY = 65536;
-
-		/** The temporary file to read from. */
-		private final File tempFile;
-
-		/** The input stream that reads from the file. */
-		private final InputStream fileInputStream;
-
-		/** The input stream that reads from memory. */
-		private final InputStream memoryInputStream;
-
-		/**
-		 * Creates a new temporary input stream that stores the given input
-		 * stream in a temporary file.
-		 *
-		 * @param originalInputStream
-		 *            The original input stream
-		 * @throws IOException
-		 *             if an I/O error occurs
-		 */
-		public TempInputStream(InputStream originalInputStream) throws IOException {
-			this(originalInputStream, -1);
-		}
-
-		/**
-		 * Creates a new temporary input stream that stores the given input
-		 * stream in memory if it is shorter than {@link #MAX_LENGTH_MEMORY},
-		 * otherwise it is stored in a file.
-		 *
-		 * @param originalInputStream
-		 *            The original input stream
-		 * @param length
-		 *            The length of the input stream
-		 * @throws IOException
-		 *             if an I/O error occurs
-		 */
-		public TempInputStream(InputStream originalInputStream, long length) throws IOException {
-			this(originalInputStream, length, MAX_LENGTH_MEMORY);
-		}
-
-		/**
-		 * Creates a new temporary input stream that stores the given input
-		 * stream in memory if it is shorter than <code>maxMemoryLength</code>,
-		 * otherwise it is stored in a file.
-		 *
-		 * @param originalInputStream
-		 *            The original input stream
-		 * @param length
-		 *            The length of the input stream
-		 * @param maxMemoryLength
-		 *            The maximum length to store in memory
-		 * @throws IOException
-		 *             if an I/O error occurs
-		 */
-		public TempInputStream(InputStream originalInputStream, long length, long maxMemoryLength) throws IOException {
-			if ((length > -1) && (length <= maxMemoryLength)) {
-				ByteArrayOutputStream memoryOutputStream = new ByteArrayOutputStream((int) length);
-				try {
-					FcpUtils.copy(originalInputStream, memoryOutputStream, length, (int) length);
-				} finally {
-					memoryOutputStream.close();
-				}
-				tempFile = null;
-				fileInputStream = null;
-				memoryInputStream = new ByteArrayInputStream(memoryOutputStream.toByteArray());
-			} else {
-				tempFile = File.createTempFile("temp-", ".bin");
-				tempFile.deleteOnExit();
-				FileOutputStream fileOutputStream = null;
-				try {
-					fileOutputStream = new FileOutputStream(tempFile);
-					FcpUtils.copy(originalInputStream, fileOutputStream, length);
-					fileInputStream = new FileInputStream(tempFile);
-				} finally {
-					FcpUtils.close(fileOutputStream);
-				}
-				memoryInputStream = null;
-			}
-		}
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public int available() throws IOException {
-			if (memoryInputStream != null) {
-				return memoryInputStream.available();
-			}
-			return fileInputStream.available();
-		}
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public void close() throws IOException {
-			if (memoryInputStream != null) {
-				memoryInputStream.close();
-				return;
-			}
-			tempFile.delete();
-			fileInputStream.close();
-		}
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public synchronized void mark(int readlimit) {
-			if (memoryInputStream != null) {
-				memoryInputStream.mark(readlimit);
-				return;
-			}
-			fileInputStream.mark(readlimit);
-		}
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public boolean markSupported() {
-			if (memoryInputStream != null) {
-				return memoryInputStream.markSupported();
-			}
-			return fileInputStream.markSupported();
-		}
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public int read() throws IOException {
-			if (memoryInputStream != null) {
-				return memoryInputStream.read();
-			}
-			return fileInputStream.read();
-		}
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public int read(byte[] b) throws IOException {
-			if (memoryInputStream != null) {
-				return memoryInputStream.read(b);
-			}
-			return fileInputStream.read(b);
-		}
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public int read(byte[] b, int off, int len) throws IOException {
-			if (memoryInputStream != null) {
-				return memoryInputStream.read(b, off, len);
-			}
-			return fileInputStream.read(b, off, len);
-		}
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public synchronized void reset() throws IOException {
-			if (memoryInputStream != null) {
-				memoryInputStream.reset();
-				return;
-			}
-			fileInputStream.reset();
-		}
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public long skip(long n) throws IOException {
-			if (memoryInputStream != null) {
-				return memoryInputStream.skip(n);
-			}
-			return fileInputStream.skip(n);
-		}
-
 	}
 
 }

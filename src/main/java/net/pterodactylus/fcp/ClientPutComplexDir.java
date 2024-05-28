@@ -24,10 +24,6 @@ import java.io.SequenceInputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import net.pterodactylus.fcp.FileEntry.DirectFileEntry;
 
 /**
  * The “ClientPutComplexDir” lets you upload a directory with different sources
@@ -41,8 +37,8 @@ public class ClientPutComplexDir extends FcpMessage {
 	/** The index for added file entries. */
 	private int fileIndex = 0;
 
-	/** The input streams from {@link DirectFileEntry}s. */
-	private final List<InputStream> directFileInputStreams = new ArrayList<InputStream>();
+	/** The input streams from {@link FileEntry}s. */
+	private final List<InputStream> directFileInputStreams = new ArrayList<>();
 
 	/**
 	 * Creates a new “ClientPutComplexDir” with the given identifier and URI.
@@ -214,14 +210,9 @@ public class ClientPutComplexDir extends FcpMessage {
 	 *            The file entry to add
 	 */
 	public void addFileEntry(FileEntry fileEntry) {
-		Map<String, String> fields = fileEntry.getFields();
-		for (Entry<String, String> fieldEntry : fields.entrySet()) {
-			setField("Files." + fileIndex + "." + fieldEntry.getKey(), fieldEntry.getValue());
-		}
+		fileEntry.getFields().forEach((key, value) -> setField("Files." + fileIndex + "." + key, value));
+		directFileInputStreams.add(fileEntry.getInputStream());
 		fileIndex++;
-		if (fileEntry instanceof FileEntry.DirectFileEntry) {
-			directFileInputStreams.add(((DirectFileEntry) fileEntry).getInputStream());
-		}
 	}
 
 	/**
@@ -242,7 +233,7 @@ public class ClientPutComplexDir extends FcpMessage {
 	@Override
 	public void write(OutputStream outputStream) throws IOException {
 		/* create payload stream. */
-		setPayloadInputStream(new SequenceInputStream(Collections.enumeration(directFileInputStreams)));
+		super.setPayloadInputStream(new SequenceInputStream(Collections.enumeration(directFileInputStreams)));
 		/* write out all the fields. */
 		super.write(outputStream);
 	}

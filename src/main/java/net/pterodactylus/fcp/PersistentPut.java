@@ -125,6 +125,15 @@ public class PersistentPut extends BaseMessage implements Identifiable {
 	}
 
 	/**
+	 * Returns the filename of the original request, if specified.
+	 *
+	 * @return The filename of the original request, or {@code null} if none was given
+	 */
+	public String getFilename() {
+		return getField("Filename");
+	}
+
+	/**
 	 * Returns the target filename of the request.
 	 *
 	 * @return The target filename of the request
@@ -152,12 +161,69 @@ public class PersistentPut extends BaseMessage implements Identifiable {
 	}
 
 	/**
+	 * Returns the private URI of the original request, if specified.
+	 *
+	 * @return The private URI of the original request, or {@code null} if none was given
+	 */
+	public String getPrivateURI() {
+		return getField("PrivateURI");
+	}
+
+	/**
+	 * Returns the target URI of the original request, if specified.
+	 *
+	 * @return The target URI of the original request, or {@code null} if none was given
+	 */
+	public String getTargetURI() {
+		return getField("TargetURI");
+	}
+
+	/**
 	 * Returns the verbosity of the request.
 	 *
 	 * @return The verbosity of the request
 	 */
 	public Verbosity getVerbosity() {
 		return Verbosity.valueOf(getField("Verbosity"));
+	}
+
+	public boolean isBinaryBlob() {
+		return Boolean.parseBoolean(getField("BinaryBlob"));
+	}
+
+	/**
+	 * Returns the compatibility mode of the original request.
+	 *
+	 * @return The compatibility mode of the original request, or {@code null} if none was given
+	 */
+	public String getCompatibilityMode() {
+		return getField("CompatibilityMode");
+	}
+
+	public boolean isDontCompress() {
+		return Boolean.parseBoolean(getField("DontCompress"));
+	}
+
+	/**
+	 * Returns the compression codecs of the original request.
+	 *
+	 * @return The compression codecs of the original request, or {@code null} if none were given
+	 */
+	public String getCodecs() {
+		return getField("Codecs");
+	}
+
+	public boolean isRealTime() {
+		return Boolean.parseBoolean(getField("RealTime"));
+	}
+
+	/**
+	 * Returns the splitfile crypto key of the original request.
+	 *
+	 * @return The splitfile crypto key of the original request, or {@code null} if none was given
+	 */
+	public String getSplitfileCryptoKey() {
+		return getField("SplitfileCryptoKey");
 	}
 
 }

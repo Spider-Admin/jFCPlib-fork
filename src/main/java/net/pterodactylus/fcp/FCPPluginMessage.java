@@ -20,7 +20,7 @@ package net.pterodactylus.fcp;
 import java.io.InputStream;
 
 /**
- * An “CPPluginMessage” sends a message with custom parameters and (optional)
+ * An “FCPPluginMessage” sends a message with custom parameters and (optional)
  * payload to a plugin.
  *
  * @author David ‘Bombe’ Roden &lt;bombe@freenetproject.org&gt;
