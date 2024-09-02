@@ -52,8 +52,8 @@ public class DefaultFcpConnectionTest {
 		});
 		Socket socket = localServer.getSocket();
 		try (InputStream socketInputStream = socket.getInputStream();
-				Reader socketReader = new InputStreamReader(socketInputStream, UTF_8);
-				BufferedReader bufferedReader = new BufferedReader(socketReader)) {
+		     Reader socketReader = new InputStreamReader(socketInputStream, UTF_8);
+		     BufferedReader bufferedReader = new BufferedReader(socketReader)) {
 			List<String> sentLines = new ArrayList<>();
 			String line = bufferedReader.readLine();
 			while (line != null) {
@@ -114,139 +114,207 @@ public class DefaultFcpConnectionTest {
 
 	@Test
 	public void closeConnectionDuplicateNameIsDispatchedCorrectly() throws Exception {
-		runWithConnection(fcpConnection -> {
-			BlockingQueue<CloseConnectionDuplicateClientName> receivedClosedConnectionDuplicateClientName = new ArrayBlockingQueue<>(1);
-			fcpConnection.addFcpListener(new FcpAdapter() {
-				@Override
-				public void receivedCloseConnectionDuplicateClientName(FcpConnection fcpConnection, CloseConnectionDuplicateClientName closeConnectionDuplicateClientName) {
-					receivedClosedConnectionDuplicateClientName.add(closeConnectionDuplicateClientName);
-				}
-			});
-			writeMessageToSocket("CloseConnectionDuplicateClientName", "Test=yes");
-			assertThat(receivedClosedConnectionDuplicateClientName.take().getField("Test"), equalTo("yes"));
-		});
+		dispatchMessageToAdapter("CloseConnectionDuplicateClientName");
 	}
 
 	@Test
 	public void nodeHelloIsDispatchedCorrectly() throws Exception {
-		runWithConnection(fcpConnection -> {
-			BlockingQueue<NodeHello> receivedNodeHello = new ArrayBlockingQueue<>(1);
-			fcpConnection.addFcpListener(new FcpAdapter() {
-				@Override
-				public void receivedNodeHello(FcpConnection fcpConnection, NodeHello nodeHello) {
-					receivedNodeHello.add(nodeHello);
-				}
-			});
-			writeMessageToSocket("NodeHello", "Version=1.2.3");
-			assertThat(receivedNodeHello.take().getVersion(), equalTo("1.2.3"));
-		});
+		dispatchMessageToAdapter("NodeHello");
 	}
 
 	@Test
 	public void protocolErrorIsDispatchedCorrectly() throws Exception {
-		runWithConnection(fcpConnection -> {
-			BlockingQueue<ProtocolError> receivedProtocolError = new ArrayBlockingQueue<>(1);
-			fcpConnection.addFcpListener(new FcpAdapter() {
-				@Override
-				public void receivedProtocolError(FcpConnection fcpConnection, ProtocolError protocolError) {
-					receivedProtocolError.add(protocolError);
-				}
-			});
-			writeMessageToSocket("ProtocolError", "Identifier=TestRequest", "Code=404", "CodeDescription=Error not found", "ExtraDescription=TestError", "Fatal=true", "Global=true");
-			ProtocolError protocolError = receivedProtocolError.take();
-			assertThat(protocolError.getIdentifier(), equalTo("TestRequest"));
-			assertThat(protocolError.getCode(), equalTo(404));
-			assertThat(protocolError.getCodeDescription(), equalTo("Error not found"));
-			assertThat(protocolError.getExtraDescription(), equalTo("TestError"));
-			assertThat(protocolError.isFatal(), equalTo(true));
-			assertThat(protocolError.isGlobal(), equalTo(true));
-		});
+		dispatchMessageToAdapter("ProtocolError");
 	}
 
 	@Test
 	public void persistentGetIsDispatchedCorrectly() throws Exception {
-		runWithConnection(fcpConnection -> {
-			BlockingQueue<PersistentGet> receivedPersistentGet = new ArrayBlockingQueue<>(1);
-			fcpConnection.addFcpListener(new FcpAdapter() {
-				@Override
-				public void receivedPersistentGet(FcpConnection fcpConnection, PersistentGet persistentGet) {
-					receivedPersistentGet.add(persistentGet);
-				}
-			});
-			writeMessageToSocket("PersistentGet", "Identifier=TestRequest", "URI=KSK@test-uri", "ClientToken=client-token", "Filename=filename", "TempFilename=/tmp/filename", "Persistence=connection", "PriorityClass=1", "ReturnType=direct", "MaxRetries=82", "Verbosity=999", "Global=true");
-			PersistentGet persistentGet = receivedPersistentGet.take();
-			assertThat(persistentGet.getIdentifier(), equalTo("TestRequest"));
-			assertThat(persistentGet.getURI(), equalTo("KSK@test-uri"));
-			assertThat(persistentGet.getClientToken(), equalTo("client-token"));
-			assertThat(persistentGet.getFilename(), equalTo("filename"));
-			assertThat(persistentGet.getTempFilename(), equalTo("/tmp/filename"));
-			assertThat(persistentGet.getPersistence(), equalTo(Persistence.connection));
-			assertThat(persistentGet.getPriority(), equalTo(Priority.interactive));
-			assertThat(persistentGet.getReturnType(), equalTo(ReturnType.direct));
-			assertThat(persistentGet.getMaxRetries(), equalTo(82));
-			assertThat(persistentGet.getVerbosity().toString(), equalTo("999"));
-			assertThat(persistentGet.isGlobal(), equalTo(true));
-		});
+		dispatchMessageToAdapter("PersistentGet");
 	}
 
 	@Test
 	public void persistentPutIsDispatchedCorrectly() throws Exception {
-		runWithConnection(fcpConnection -> {
-			BlockingQueue<PersistentPut> receivedPersistentPut = new ArrayBlockingQueue<>(1);
-			fcpConnection.addFcpListener(new FcpAdapter() {
-				@Override
-				public void receivedPersistentPut(FcpConnection fcpConnection, PersistentPut persistentPut) {
-					receivedPersistentPut.add(persistentPut);
-				}
-			});
-			writeMessageToSocket("PersistentPut", "Identifier=TestRequest", "URI=KSK@test-uri", "PrivateURI=KSK@private-test-uri", "Verbosity=999", "PriorityClass=2", "UploadFrom=direct", "Persistence=reboot", "Filename=filename.dat", "TargetURI=KSK@target-uri", "Metadata.ContentType=application/x-test-data", "Global=true", "DataLength=2345", "ClientToken=client-token", "Started=true", "MaxRetries=83", "TargetFilename=target.dat", "BinaryBlob=true", "CompatibilityMode=COMPAT_CURRENT", "DontCompress=false", "Codecs=codec1,codec2", "RealTime=true", "SplitfileCryptoKey=splitfile-crypto-key");
-			PersistentPut persistentPut = receivedPersistentPut.take();
-			assertThat(persistentPut.getIdentifier(), equalTo("TestRequest"));
-			assertThat(persistentPut.getURI(), equalTo("KSK@test-uri"));
-			assertThat(persistentPut.getPrivateURI(), equalTo("KSK@private-test-uri"));
-			assertThat(persistentPut.getVerbosity().toString(), equalTo("999"));
-			assertThat(persistentPut.getPriority(), equalTo(Priority.immediateSplitfile));
-			assertThat(persistentPut.getUploadFrom(), equalTo(UploadFrom.direct));
-			assertThat(persistentPut.getPersistence(), equalTo(Persistence.reboot));
-			assertThat(persistentPut.getFilename(), equalTo("filename.dat"));
-			assertThat(persistentPut.getTargetURI(), equalTo("KSK@target-uri"));
-			assertThat(persistentPut.getMetadataContentType(), equalTo("application/x-test-data"));
-			assertThat(persistentPut.isGlobal(), equalTo(true));
-			assertThat(persistentPut.getDataLength(), equalTo(2345L));
-			assertThat(persistentPut.getClientToken(), equalTo("client-token"));
-			assertThat(persistentPut.isStarted(), equalTo(true));
-			assertThat(persistentPut.getMaxRetries(), equalTo(83));
-			assertThat(persistentPut.getTargetFilename(), equalTo("target.dat"));
-			assertThat(persistentPut.isBinaryBlob(), equalTo(true));
-			assertThat(persistentPut.getCompatibilityMode(), equalTo("COMPAT_CURRENT"));
-			assertThat(persistentPut.isDontCompress(), equalTo(false));
-			assertThat(persistentPut.getCodecs(), equalTo("codec1,codec2"));
-			assertThat(persistentPut.isRealTime(), equalTo(true));
-			assertThat(persistentPut.getSplitfileCryptoKey(), equalTo("splitfile-crypto-key"));
-		});
+		dispatchMessageToAdapter("PersistentPut");
 	}
 
 	@Test
 	public void simpleProgressIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("SimpleProgress");
+	}
+
+	@Test
+	public void persistentPutDirIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("PersistentPutDir");
+	}
+
+	@Test
+	public void uriGeneratedIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("URIGenerated");
+	}
+
+	@Test
+	public void endListPersistentRequestsIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("EndListPersistentRequests");
+	}
+
+	@Test
+	public void peerIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("Peer");
+	}
+
+	@Test
+	public void peerNoteIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("PeerNote");
+	}
+
+	@Test
+	public void startedCompressionIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("StartedCompression");
+	}
+
+	@Test
+	public void finishedCompressionIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("FinishedCompression");
+	}
+
+	@Test
+	public void getFailedIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("GetFailed");
+	}
+
+	@Test
+	public void putFetchableIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("PutFetchable");
+	}
+
+	@Test
+	public void putSuccessfulIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("PutSuccessful");
+	}
+
+	@Test
+	public void putFailedIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("PutFailed");
+	}
+
+	@Test
+	public void dataFoundIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("DataFound");
+	}
+
+	@Test
+	public void subscribedUSKUpdateIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("SubscribedUSKUpdate");
+	}
+
+	@Test
+	public void subscribedUSKIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("SubscribedUSK");
+	}
+
+	@Test
+	public void identifierCollisionIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("IdentifierCollision");
+	}
+
+	@Test
+	public void endListPeerNotesIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("EndListPeerNotes");
+	}
+
+	@Test
+	public void endListPeersIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("EndListPeers");
+	}
+
+	@Test
+	public void sskKeypairIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("SSKKeypair");
+	}
+
+	@Test
+	public void peerRemovedIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("PeerRemoved");
+	}
+
+	@Test
+	public void persistentRequestModifiedIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("PersistentRequestModified");
+	}
+
+	@Test
+	public void persistentRequestRemovedIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("PersistentRequestRemoved");
+	}
+
+	@Test
+	public void unknownPeerNoteTypeIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("UnknownPeerNoteType");
+	}
+
+	@Test
+	public void unknownNodeIdentifierIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("UnknownNodeIdentifier");
+	}
+
+	@Test
+	public void fcpPluginReplyIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("FCPPluginReply");
+	}
+
+	@Test
+	public void pluginInfoIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("PluginInfo");
+	}
+
+	@Test
+	public void pluginRemovedIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("PluginRemoved");
+	}
+
+	@Test
+	public void nodeDataIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("NodeData", "ark.pubURI=", "ark.number=0", "auth.negTypes=0", "version=0,1,2,3", "lastGoodVersion=0,1,2,3");
+	}
+
+	@Test
+	public void testDDAReplyIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("TestDDAReply");
+	}
+
+	@Test
+	public void testDDACompleteIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("TestDDAComplete");
+	}
+
+	@Test
+	public void configDataIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("ConfigData");
+	}
+
+	@Test
+	public void sentFeedIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("SentFeed");
+	}
+
+	@Test
+	public void receivedBookmarkFeedIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("ReceivedBookmarkFeed");
+	}
+
+	@Test
+	public void messageIsDispatchedCorrectly() throws Exception {
+		dispatchMessageToAdapter("Message");
+	}
+
+	private <T> void dispatchMessageToAdapter(String name, String... parameters) throws Exception {
 		runWithConnection(fcpConnection -> {
-			BlockingQueue<SimpleProgress> receivedSimpleProgress = new ArrayBlockingQueue<>(1);
-			fcpConnection.addFcpListener(new FcpAdapter() {
-				@Override
-				public void receivedSimpleProgress(FcpConnection fcpConnection, SimpleProgress simpleProgress) {
-					receivedSimpleProgress.add(simpleProgress);
-				}
-			});
-			writeMessageToSocket("SimpleProgress", "Identifier=TestRequest", "Global=true", "LastProgress=2000", "FinalizedTotal=true", "MinSuccessFetchBlocks=750", "Total=1000", "Required=500", "Failed=38", "FatallyFailed=0", "Succeeded=347");
-			SimpleProgress simpleProgress = receivedSimpleProgress.take();
-			assertThat(simpleProgress.getIdentifier(), equalTo("TestRequest"));
-			assertThat(simpleProgress.getLastProgress(), equalTo(2000L));
-			assertThat(simpleProgress.isFinalizedTotal(), equalTo(true));
-			assertThat(simpleProgress.getMinSuccessFetchBlocks(), equalTo(750));
-			assertThat(simpleProgress.getTotal(), equalTo(1000));
-			assertThat(simpleProgress.getRequired(), equalTo(500));
-			assertThat(simpleProgress.getFailed(), equalTo(38));
-			assertThat(simpleProgress.getFatallyFailed(), equalTo(0));
-			assertThat(simpleProgress.getSucceeded(), equalTo(347));
+			BlockingQueue<T> queue = new ArrayBlockingQueue<>(1);
+			DispatchingFcpAdapter fcpListener = new DispatchingFcpAdapter();
+			fcpListener.addListener(name, queue::add);
+			fcpConnection.addFcpListener(fcpListener);
+			writeMessageToSocket(name, parameters);
+			assertThat(queue.take(), notNullValue());
 		});
 	}
 
@@ -256,7 +324,7 @@ public class DefaultFcpConnectionTest {
 
 	private void writeMessageToSocket(String messageName, byte[] data, String... parameters) throws IOException {
 		try (OutputStream socketOutputStream = localServer.getSocket().getOutputStream();
-				Writer socketWriter = new OutputStreamWriter(socketOutputStream, UTF_8)) {
+		     Writer socketWriter = new OutputStreamWriter(socketOutputStream, UTF_8)) {
 			socketWriter.write(messageName + "\n");
 			for (String parameter : parameters) {
 				socketWriter.write(parameter + "\n");
