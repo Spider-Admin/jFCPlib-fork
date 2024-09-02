@@ -66,6 +66,20 @@ public class PersistentPutDir extends BaseMessage implements Identifiable {
 	}
 
 	/**
+	 * Returns the persistence of the request. If the field value cannot be
+	 * parsed into a {@link Persistence} values, {@code null} is returned.
+	 *
+	 * @return The persistence of the request, or {@code null}
+	 */
+	public Persistence getPersistence() {
+		try {
+			return Persistence.valueOf(getField("Persistence"));
+		} catch (IllegalArgumentException e) {
+			return null;
+		}
+	}
+
+	/**
 	 * Returns the priority of the request.
 	 *
 	 * @return The priority of the request
@@ -85,6 +99,24 @@ public class PersistentPutDir extends BaseMessage implements Identifiable {
 	}
 
 	/**
+	 * Returns the type of the put dir command.
+	 *
+	 * @return “disk” or “complex”
+	 */
+	public String getPutDirType() {
+		return getField("PutDirType");
+	}
+
+	/**
+	 * Returns the compatibility mode used for the insert.
+	 *
+	 * @return The name of the compatibility mode used for the insert
+	 */
+	public String getCompatibilityMode() {
+		return getField("CompatibilityMode");
+	}
+
+	/**
 	 * Returns the maximum number of retries for failed blocks.
 	 *
 	 * @return The maximum number of retries, or <code>-1</code> for endless
@@ -100,11 +132,7 @@ public class PersistentPutDir extends BaseMessage implements Identifiable {
 	 * @return The number of files in the request
 	 */
 	public int getFileCount() {
-		int fileCount = -1;
-		while (getField("Files." + ++fileCount + ".UploadFrom") != null) {
-			/* do nothing. */
-		}
-		return fileCount;
+		return FcpUtils.safeParseInt(getField("Count"), 0);
 	}
 
 	/**
