@@ -49,8 +49,9 @@ public class AddPeer extends FcpMessage {
 	 * Creates a new “AddPeer” request that reads the noderef of the peer from
 	 * the given file.
 	 *
-	 * @param file
-	 *            The file to read the noderef from
+	 * @param trust The trust values for the new peer
+	 * @param visibility The visibility of the new peer
+	 * @param file The file to read the noderef from
 	 */
 	public AddPeer(Trust trust, Visibility visibility, String file) {
 		this(trust, visibility);
@@ -66,8 +67,9 @@ public class AddPeer extends FcpMessage {
 	 * Creates a new “AddPeer” request that reads the noderef of the peer from
 	 * the given URL.
 	 *
-	 * @param url
-	 *            The URL to read the noderef from
+	 * @param trust The trust values for the new peer
+	 * @param visibility The visibility of the new peer
+	 * @param url The URL to read the noderef from
 	 */
 	public AddPeer(Trust trust, Visibility visibility, URL url) {
 		this(trust, visibility);
@@ -82,8 +84,9 @@ public class AddPeer extends FcpMessage {
 	/**
 	 * Creates a new “AddPeer” request that adds the peer given by the noderef.
 	 *
-	 * @param nodeRef
-	 *            The noderef of the peer
+	 * @param trust The trust values for the new peer
+	 * @param visibility The visibility of the new peer
+	 * @param nodeRef The noderef of the peer
 	 */
 	public AddPeer(Trust trust, Visibility visibility, NodeRef nodeRef) {
 		this(trust, visibility);

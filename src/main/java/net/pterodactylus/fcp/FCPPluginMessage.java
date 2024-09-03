@@ -29,6 +29,7 @@ public class FCPPluginMessage extends FcpMessage {
 
 	/**
 	 * @deprecated Use {@link #FCPPluginMessage(String, String)} instead
+	 * @param pluginClass The name of the plugin’s main class
 	 */
 	@Deprecated
 	public FCPPluginMessage(String pluginClass) {
@@ -43,6 +44,7 @@ public class FCPPluginMessage extends FcpMessage {
 
 	/**
 	 * @deprecated Use {@link #FCPPluginMessage(String, String)} instead
+	 * @param identifier The identifier of the message
 	 */
 	@Deprecated
 	public void setIdentifier(String identifier) {
@@ -63,6 +65,7 @@ public class FCPPluginMessage extends FcpMessage {
 
 	/**
 	 * @deprecated Use {@link #setData(InputStream, long)} instead
+	 * @param dataLength The length of the additional data in this message
 	 */
 	@Deprecated
 	public void setDataLength(long dataLength) {

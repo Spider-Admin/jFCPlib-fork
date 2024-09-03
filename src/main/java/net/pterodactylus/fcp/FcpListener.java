@@ -405,9 +405,8 @@ public interface FcpListener extends EventListener {
 
 	/**
 	 * Notifies a listener that a message has been received. This method is
-	 * only called if {@link FcpConnection#handleMessage(FcpMessage)} does not
-	 * recognize the message. Should that ever happen, please file a bug
-	 * report!
+	 * only called if an unrecognized message is received. Should that ever
+	 * happen, please file a bug report!
 	 *
 	 * @param fcpConnection
 	 *            The connection that received the message
