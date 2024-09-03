@@ -49,7 +49,7 @@ public class SentFeed extends BaseMessage implements Identifiable {
 	/**
 	 * Returns the node status of the peer. The node status is definied in
 	 * {@code freenet.node.PeerManager}.
-	 * <p>
+	 *
 	 * <ol start="1">
 	 * <li>Connected</li>
 	 * <li>Backed off</li>
