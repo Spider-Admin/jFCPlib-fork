@@ -22,6 +22,7 @@ import org.junit.rules.ExternalResource;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * Opens a local {@link ServerSocket} for use in a unit test.
@@ -60,6 +61,11 @@ public class LocalServer extends ExternalResource {
 	}
 
 	public Socket getSocket() {
+		try {
+			connectedLatch.await();
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
 		return socket;
 	}
 
@@ -68,6 +74,7 @@ public class LocalServer extends ExternalResource {
 		new Thread(() -> {
 			try {
 				socket = serverSocket.accept();
+				connectedLatch.countDown();
 			} catch (IOException e) {
 				if (!finished) {
 					throw new RuntimeException(e);
@@ -95,6 +102,7 @@ public class LocalServer extends ExternalResource {
 	}
 
 	private final ServerSocket serverSocket;
+	private final CountDownLatch connectedLatch = new CountDownLatch(1);
 	private volatile boolean finished = false;
 	private volatile Socket socket;
 
