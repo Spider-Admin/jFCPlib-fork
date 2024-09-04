@@ -206,6 +206,31 @@ public class FcpClientTest {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getDarknetPeers, false, false, anything(), contains(peerWithIdentity(equalTo("3"))));
 	}
 
+	@Test
+	public void getOpennetPeersWithMetadataFlagSetSendsCorrectMessage() throws Exception {
+		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getOpennetPeers, true, false, contains(hasField("WithMetadata", equalTo("true"))), anything());
+	}
+
+	@Test
+	public void getOpennetPeersWithMetadataFlagNotSetSendsCorrectMessage() throws Exception {
+		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getOpennetPeers, false, false, contains(hasField("WithMetadata", equalTo("false"))), anything());
+	}
+
+	@Test
+	public void getOpennetPeersWithVolatileFlagSetSendsCorrectMessage() throws Exception {
+		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getOpennetPeers, false, true, contains(hasField("WithVolatile", equalTo("true"))), anything());
+	}
+
+	@Test
+	public void getOpennetPeersWithVolatileFlagNotSetSendsCorrectMessage() throws Exception {
+		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getOpennetPeers, false, false, contains(hasField("WithVolatile", equalTo("false"))), anything());
+	}
+
+	@Test
+	public void getOpennetPeersReturnsPeersWithCorrectIdentifier() throws Exception {
+		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getOpennetPeers, false, false, anything(), contains(peerWithIdentity(equalTo("1"))));
+	}
+
 	private static BiFunction<Boolean, Boolean, Collection<Peer>> getPeers(FcpClient fcpClient) {
 		return (withMetadata, withVolatile) -> {
 			try {
@@ -226,6 +251,16 @@ public class FcpClientTest {
 		};
 	}
 
+	private static BiFunction<Boolean, Boolean, Collection<Peer>> getOpennetPeers(FcpClient fcpClient) {
+		return (withMetadata, withVolatile) -> {
+			try {
+				return fcpClient.getOpennetPeers(withMetadata, withVolatile);
+			} catch (IOException | FcpException e) {
+				throw new RuntimeException(e);
+			}
+		};
+	}
+
 	private static void sendListPeersAndVerifySentMessagesAndReturnedPeers(Function<FcpClient, BiFunction<Boolean, Boolean, Collection<Peer>>> peerRetrieval, boolean withMetadataFlag, boolean withVolatileFlag, Matcher<? super Iterable<? extends FcpMessage>> sentMessagesMatcher, Matcher<? super Collection<Peer>> peersMatcher) throws IOException, FcpException {
 		List<FcpMessage> sentMessages = new ArrayList<>();
 		FcpConnection fcpConnection = createFcpConnection(message -> {
@@ -235,7 +270,7 @@ public class FcpClientTest {
 					String identifier = message.getField("Identifier");
 					listener.receivedPeer(connection, new Peer(new FcpMessage("Peer").put("Identifier", identifier).put("identity", "1").put("opennet", "true")));
 					listener.receivedPeer(connection, new Peer(new FcpMessage("Peer").put("Identifier", "Other Identifier").put("identity", "4")));
-					listener.receivedPeer(connection, new Peer(new FcpMessage("Peer").put("Identifier", identifier).put("identity", "2").put("seed", "true")));
+					listener.receivedPeer(connection, new Peer(new FcpMessage("Peer").put("Identifier", identifier).put("identity", "2").put("opennet", "true").put("seed", "true")));
 					listener.receivedEndListPeers(connection, new EndListPeers(new FcpMessage("EndListPeers").put("Identifier", "Other Identifier")));
 					listener.receivedPeer(connection, new Peer(new FcpMessage("Peer").put("Identifier", identifier).put("identity", "3")));
 					listener.receivedEndListPeers(connection, new EndListPeers(new FcpMessage("EndListPeers").put("Identifier", identifier)));
