@@ -204,7 +204,8 @@ public class FcpClientTest {
 
 			@Override
 			public void sendMessage(FcpMessage fcpMessage) {
-				listeners.forEach(listener -> messageConsumer.apply(fcpMessage).accept(listener, this));
+				BiConsumer<FcpListener, FcpConnection> listenerNotifier = messageConsumer.apply(fcpMessage);
+				listeners.forEach(listener -> listenerNotifier.accept(listener, this));
 			}
 		};
 	}
