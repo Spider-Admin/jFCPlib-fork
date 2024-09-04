@@ -7,22 +7,19 @@ import net.pterodactylus.fcp.FcpMessage;
 import net.pterodactylus.fcp.GetFailed;
 import net.pterodactylus.fcp.NodeHello;
 import net.pterodactylus.fcp.SSKKeypair;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+import static net.pterodactylus.fcp.test.InputStreamMatchers.streamContaining;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -145,41 +142,9 @@ public class FcpClientTest {
 			GetResult getResult = fcpClient.getURI("KSK@test");
 			assertThat(getResult.isSuccess(), equalTo(true));
 			assertThat(getResult.getContentLength(), equalTo(4L));
-			assertThat(getResult.getInputStream(), contains('D', 'a', 't', 'a'));
+			assertThat(getResult.getInputStream(), streamContaining('D', 'a', 't', 'a'));
 		}
 	}
-
-	private Matcher<InputStream> contains(int... content) {
-		return new TypeSafeDiagnosingMatcher<InputStream>() {
-			@Override
-			protected boolean matchesSafely(InputStream inputStream, Description mismatchDescription) {
-				try {
-					for (int index = 0; index < content.length; index++) {
-						int readByte = inputStream.read();
-						if (readByte != content[index]) {
-							mismatchDescription.appendText("was ").appendValue(readByte).appendText(" at offset ").appendValue(index);
-							return false;
-						}
-					}
-					int eof = inputStream.read();
-					if (eof != -1) {
-						mismatchDescription.appendText("contained more than ").appendValue(content.length).appendText(" bytes");
-						return false;
-					}
-				} catch (IOException e) {
-					mismatchDescription.appendText("could not be read (").appendValue(e).appendText(")");
-					return false;
-				}
-				return true;
-			}
-
-			@Override
-			public void describeTo(Description description) {
-				description.appendText("is input stream containing ").appendValue(content);
-			}
-		};
-	}
-
 	@Test
 	public void generatingKeyPairSendsCorrectMessage() throws IOException, FcpException {
 		FcpConnection fcpConnection = createFcpConnection(message -> {
