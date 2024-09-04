@@ -151,8 +151,7 @@ public class FcpClientTest {
 			if (message.getName().equals("GenerateSSK")) {
 				return ((listener, connection) -> listener.receivedSSKKeypair(connection, new SSKKeypair(new FcpMessage("SSKKeypair").put("InsertURI", "insert-uri").put("RequestURI", "request-uri"))));
 			}
-			return (l, c) -> {
-			};
+			return FcpClientTest::doNothing;
 		});
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			SSKKeypair keypair = fcpClient.generateKeyPair();
@@ -161,9 +160,12 @@ public class FcpClientTest {
 		}
 	}
 
+	private static void doNothing(FcpListener listener, FcpConnection connection) {
+		// do nothing.
+	}
+
 	private static FcpConnection createFcpConnection() {
-		return createFcpConnection(m -> (l, c) -> {
-		});
+		return createFcpConnection(m -> FcpClientTest::doNothing);
 	}
 
 	private static FcpConnection createFcpConnection(Function<FcpMessage, BiConsumer<FcpListener, FcpConnection>> messageConsumer) {
