@@ -81,4 +81,23 @@ public class Matchers {
 		};
 	}
 
+	public static <V> Matcher<FcpMessage> hasField(String name, Matcher<? super V> valueMatcher) {
+		return new TypeSafeDiagnosingMatcher<FcpMessage>() {
+			@Override
+			protected boolean matchesSafely(FcpMessage fcpMessage, Description mismatchDescription) {
+				Object value = fcpMessage.getField(name);
+				if (!valueMatcher.matches(value)) {
+					valueMatcher.describeMismatch(value, mismatchDescription);
+					return false;
+				}
+				return true;
+			}
+
+			@Override
+			public void describeTo(Description description) {
+				description.appendText("has field ").appendValue(name).appendText(" with value ").appendDescriptionOf(valueMatcher);
+			}
+		};
+	}
+
 }
