@@ -599,7 +599,7 @@ public class FcpClient implements Closeable {
 	 *             if an FCP error occurs
 	 */
 	public void addPeer(URL url, Trust trust, Visibility visibility) throws IOException, FcpException {
-		addPeer(new AddPeer(trust, visibility, url)); // FIXME – add parameters
+		addPeer(new AddPeer(trust, visibility, url));
 	}
 
 	/**
@@ -615,7 +615,7 @@ public class FcpClient implements Closeable {
 	 *             if an FCP error occurs
 	 */
 	public void addPeer(String file, Trust trust, Visibility visibility) throws IOException, FcpException {
-		addPeer(new AddPeer(trust, visibility, file)); // FIXME – add parameters
+		addPeer(new AddPeer(trust, visibility, file));
 	}
 
 	/**
