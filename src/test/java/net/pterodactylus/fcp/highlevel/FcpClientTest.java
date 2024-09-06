@@ -528,7 +528,7 @@ public class FcpClientTest {
 			@Override
 			public void sendMessage(FcpMessage fcpMessage) {
 				BiConsumer<FcpListener, FcpConnection> listenerNotifier = messageConsumer.apply(fcpMessage);
-				listeners.forEach(listener -> listenerNotifier.accept(listener, this));
+				new Thread(() -> listeners.forEach(listener -> listenerNotifier.accept(listener, this))).start();
 			}
 		};
 	}
