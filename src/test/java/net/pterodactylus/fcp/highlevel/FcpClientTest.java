@@ -453,6 +453,22 @@ public class FcpClientTest {
 	}
 
 	@Test
+	public void modifyPeerSendsCorrectMessage() throws Exception {
+		List<FcpMessage> sentMessages = new ArrayList<>();
+		FcpConnection fcpConnection = createFcpConnection(message -> {
+			if (message.getName().equals("ModifyPeer")) {
+				sentMessages.add(message);
+				return (listener, connection) -> listener.receivedPeer(connection, createPeer());
+			}
+			return FcpClientTest::doNothing;
+		});
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			fcpClient.modifyPeer(createPeer(), modifyPeer -> modifyPeer.setAllowLocalAddresses(true));
+			assertThat(sentMessages, contains(hasField("AllowLocalAddresses", equalTo("true"))));
+		}
+	}
+
+	@Test
 	public void generatingKeyPairSendsCorrectMessage() throws IOException, FcpException {
 		FcpConnection fcpConnection = createFcpConnection(message -> {
 			if (message.getName().equals("GenerateSSK")) {

@@ -76,6 +76,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static com.google.common.collect.FluentIterable.from;
 import static java.util.stream.Collectors.toList;
@@ -660,8 +661,35 @@ public class FcpClient implements Closeable {
 	 *             if an I/O error occurs
 	 * @throws FcpException
 	 *             if an FCP error occurs
+	 * @deprecated Use {@link #modifyPeer(Peer, Consumer)}
 	 */
+	@Deprecated
 	public void modifyPeer(final Peer peer, final Boolean allowLocalAddresses, final Boolean disabled, final Boolean listenOnly) throws IOException, FcpException {
+		modifyPeer(peer, modifyPeer -> {
+			if (allowLocalAddresses != null) {
+				modifyPeer.setAllowLocalAddresses(allowLocalAddresses);
+			}
+			if (disabled != null) {
+				modifyPeer.setEnabled(!disabled);
+			}
+			if (listenOnly != null) {
+				modifyPeer.setListenOnly(listenOnly);
+			}
+		});
+	}
+
+	/**
+	 * Modifies the given peer.
+	 *
+	 * @param peer The peer to modify
+	 * @param modifyPeerConsumer A lambda that modifies a {@link ModifyPeer}
+	 * 		object to change the peer’s configuration
+	 * @throws IOException if an I/O error occurs
+	 * @throws FcpException if an FCP error occurs
+	 */
+	public void modifyPeer(Peer peer, Consumer<ModifyPeer> modifyPeerConsumer) throws IOException, FcpException {
+		ModifyPeer modifyPeer = new ModifyPeer(createIdentifier("modify-peer"), peer.getIdentifier());
+		modifyPeerConsumer.accept(modifyPeer);
 		new ExtendedFcpAdapter() {
 
 			/**
@@ -670,7 +698,7 @@ public class FcpClient implements Closeable {
 			@Override
 			@SuppressWarnings("synthetic-access")
 			public void run() throws IOException {
-				sendMessage(new ModifyPeer(peer.getIdentity(), allowLocalAddresses, disabled, listenOnly));
+				sendMessage(modifyPeer);
 			}
 
 			/**
