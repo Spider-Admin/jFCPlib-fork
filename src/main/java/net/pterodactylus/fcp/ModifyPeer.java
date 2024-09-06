@@ -61,8 +61,17 @@ public class ModifyPeer extends FcpMessage {
 		setField("IsBurstOnly", String.valueOf(burstOnly));
 	}
 
+	/**
+	 * @param ignoreSource {@code true} to ignore the source port of the peer
+	 * @deprecated Use {@link #setIgnoreSourcePort(boolean)}
+	 */
+	@Deprecated
 	public void setIgnoreSource(boolean ignoreSource) {
 		setField("IgnoreSourcePort", String.valueOf(ignoreSource));
+	}
+
+	public void setIgnoreSourcePort(boolean ignoreSourcePort) {
+		setField("IgnoreSourcePort", String.valueOf(ignoreSourcePort));
 	}
 
 }
