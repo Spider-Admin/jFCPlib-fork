@@ -11,7 +11,10 @@ import net.pterodactylus.fcp.GetFailed;
 import net.pterodactylus.fcp.NodeHello;
 import net.pterodactylus.fcp.NodeRef;
 import net.pterodactylus.fcp.Peer;
+import net.pterodactylus.fcp.PeerRemoved;
+import net.pterodactylus.fcp.ProtocolError;
 import net.pterodactylus.fcp.SSKKeypair;
+import net.pterodactylus.fcp.UnknownNodeIdentifier;
 import org.hamcrest.Matcher;
 import org.junit.Rule;
 import org.junit.Test;
@@ -45,6 +48,7 @@ import static org.hamcrest.Matchers.anything;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertThrows;
 
 public class FcpClientTest {
 
@@ -465,6 +469,66 @@ public class FcpClientTest {
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			fcpClient.modifyPeer(createPeer(), modifyPeer -> modifyPeer.setAllowLocalAddresses(true));
 			assertThat(sentMessages, contains(hasField("AllowLocalAddresses", equalTo("true"))));
+		}
+	}
+
+	@Test
+	public void removePeerSendsRemovePeerMessageWithIdentityAsNodeIdentifier() throws Exception {
+		List<FcpMessage> sentMessages = new ArrayList<>();
+		FcpConnection fcpConnection = createFcpConnection(message -> {
+			if (message.getName().equals("RemovePeer")) {
+				sentMessages.add(message);
+				FcpMessage peerRemovedMessage = new FcpMessage("PeerRemoved");
+				peerRemovedMessage.put("NodeIdentifier", message.getField("NodeIdentifier"));
+				return (listener, connection) -> listener.receivedPeerRemoved(connection, new PeerRemoved(peerRemovedMessage));
+			}
+			return FcpClientTest::doNothing;
+		});
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			fcpClient.removePeer(createPeer());
+			assertThat(sentMessages, contains(allOf(hasField("NodeIdentifier", equalTo("identity")))));
+		}
+	}
+
+	@Test
+	public void removePeerWithInvalidNodeIdentifierReturns() throws Exception {
+		FcpConnection fcpConnection = createFcpConnection(message -> {
+			if (message.getName().equals("RemovePeer")) {
+				return (listener, connection) -> listener.receivedUnknownNodeIdentifier(connection, new UnknownNodeIdentifier(message));
+			}
+			return FcpClientTest::doNothing;
+		});
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			fcpClient.removePeer(createPeer());
+		}
+	}
+
+	@Test
+	public void removePeerWithInvalidNodeIdentifierIgnoresPositiveResultForDifferentNodeIdentifier() throws Exception {
+		removePeerAndVerifyThatNodeIdentifierIsNotBeingIgnored((listener, connection) -> {
+			listener.receivedPeerRemoved(connection, new PeerRemoved(new FcpMessage("PeerRemoved").put("NodeIdentifier", "different-node")));
+			listener.receivedProtocolError(connection, new ProtocolError(new FcpMessage("ProtocolError").put("Code", "123")));
+		});
+	}
+
+	@Test
+	public void removePeerWithInvalidNodeIdentifierIgnoresNegativeResultForDifferentNodeIdentifier() throws Exception {
+		removePeerAndVerifyThatNodeIdentifierIsNotBeingIgnored((listener, connection) -> {
+			listener.receivedUnknownNodeIdentifier(connection, new UnknownNodeIdentifier(new FcpMessage("UnknownNodeIdentifier").put("NodeIdentifier", "different-node")));
+			listener.receivedProtocolError(connection, new ProtocolError(new FcpMessage("ProtocolError").put("Code", "123")));
+		});
+	}
+
+	private static void removePeerAndVerifyThatNodeIdentifierIsNotBeingIgnored(BiConsumer<FcpListener, FcpConnection> responseGenerator) {
+		FcpConnection fcpConnection = createFcpConnection(message -> {
+			if (message.getName().equals("RemovePeer")) {
+				return responseGenerator;
+			}
+			return FcpClientTest::doNothing;
+		});
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			FcpProtocolException fcpProtocolException = assertThrows(FcpProtocolException.class, () -> fcpClient.removePeer(createPeer()));
+			assertThat(fcpProtocolException.getCode(), equalTo(123));
 		}
 	}
 

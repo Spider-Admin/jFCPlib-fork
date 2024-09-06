@@ -59,6 +59,7 @@ import net.pterodactylus.fcp.ProtocolError;
 import net.pterodactylus.fcp.RemovePeer;
 import net.pterodactylus.fcp.SSKKeypair;
 import net.pterodactylus.fcp.SimpleProgress;
+import net.pterodactylus.fcp.UnknownNodeIdentifier;
 import net.pterodactylus.fcp.WatchGlobal;
 
 import java.io.Closeable;
@@ -730,7 +731,7 @@ public class FcpClient implements Closeable {
 			@Override
 			@SuppressWarnings("synthetic-access")
 			public void run() throws IOException {
-				sendMessage(new RemovePeer(peer.getIdentity()));
+				sendMessage(new RemovePeer(createIdentifier("remove-peer"), peer.getIdentity()));
 			}
 
 			/**
@@ -738,7 +739,16 @@ public class FcpClient implements Closeable {
 			 */
 			@Override
 			public void receivedPeerRemoved(FcpConnection fcpConnection, PeerRemoved peerRemoved) {
-				complete();
+				if (peerRemoved.getNodeIdentifier().equals(peer.getIdentity())) {
+					complete();
+				}
+			}
+
+			@Override
+			public void receivedUnknownNodeIdentifier(FcpConnection fcpConnection, UnknownNodeIdentifier unknownNodeIdentifier) {
+				if (unknownNodeIdentifier.getNodeIdentifier().equals(peer.getIdentity())) {
+					complete();
+				}
 			}
 		}.execute();
 	}
