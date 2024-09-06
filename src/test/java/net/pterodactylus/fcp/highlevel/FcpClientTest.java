@@ -231,6 +231,31 @@ public class FcpClientTest {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getOpennetPeers, false, false, anything(), contains(peerWithIdentity(equalTo("1"))));
 	}
 
+	@Test
+	public void getSeedPeersWithMetadataFlagSetSendsCorrectMessage() throws Exception {
+		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getSeedPeers, true, false, contains(hasField("WithMetadata", equalTo("true"))), anything());
+	}
+
+	@Test
+	public void getSeedPeersWithMetadataFlagNotSetSendsCorrectMessage() throws Exception {
+		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getSeedPeers, false, false, contains(hasField("WithMetadata", equalTo("false"))), anything());
+	}
+
+	@Test
+	public void getSeedPeersWithVolatileFlagSetSendsCorrectMessage() throws Exception {
+		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getSeedPeers, false, true, contains(hasField("WithVolatile", equalTo("true"))), anything());
+	}
+
+	@Test
+	public void getSeedPeersWithVolatileFlagNotSetSendsCorrectMessage() throws Exception {
+		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getSeedPeers, false, false, contains(hasField("WithVolatile", equalTo("false"))), anything());
+	}
+
+	@Test
+	public void getSeedPeersReturnsPeersWithCorrectIdentifier() throws Exception {
+		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getSeedPeers, false, false, anything(), contains(peerWithIdentity(equalTo("2"))));
+	}
+
 	private static BiFunction<Boolean, Boolean, Collection<Peer>> getPeers(FcpClient fcpClient) {
 		return (withMetadata, withVolatile) -> {
 			try {
@@ -255,6 +280,16 @@ public class FcpClientTest {
 		return (withMetadata, withVolatile) -> {
 			try {
 				return fcpClient.getOpennetPeers(withMetadata, withVolatile);
+			} catch (IOException | FcpException e) {
+				throw new RuntimeException(e);
+			}
+		};
+	}
+
+	private static BiFunction<Boolean, Boolean, Collection<Peer>> getSeedPeers(FcpClient fcpClient) {
+		return (withMetadata, withVolatile) -> {
+			try {
+				return fcpClient.getSeedPeers(withMetadata, withVolatile);
 			} catch (IOException | FcpException e) {
 				throw new RuntimeException(e);
 			}
