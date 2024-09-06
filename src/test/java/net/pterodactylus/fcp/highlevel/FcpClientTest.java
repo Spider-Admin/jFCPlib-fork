@@ -1,5 +1,7 @@
 package net.pterodactylus.fcp.highlevel;
 
+import net.pterodactylus.fcp.AddPeer.Trust;
+import net.pterodactylus.fcp.AddPeer.Visibility;
 import net.pterodactylus.fcp.AllData;
 import net.pterodactylus.fcp.EndListPeers;
 import net.pterodactylus.fcp.FcpConnection;
@@ -7,6 +9,7 @@ import net.pterodactylus.fcp.FcpListener;
 import net.pterodactylus.fcp.FcpMessage;
 import net.pterodactylus.fcp.GetFailed;
 import net.pterodactylus.fcp.NodeHello;
+import net.pterodactylus.fcp.NodeRef;
 import net.pterodactylus.fcp.Peer;
 import net.pterodactylus.fcp.SSKKeypair;
 import org.hamcrest.Matcher;
@@ -16,6 +19,7 @@ import org.junit.rules.Timeout;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -24,10 +28,19 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import static net.pterodactylus.fcp.AddPeer.Trust.HIGH;
+import static net.pterodactylus.fcp.AddPeer.Trust.LOW;
+import static net.pterodactylus.fcp.AddPeer.Trust.NORMAL;
+import static net.pterodactylus.fcp.AddPeer.Visibility.NAME_ONLY;
+import static net.pterodactylus.fcp.AddPeer.Visibility.NO;
+import static net.pterodactylus.fcp.AddPeer.Visibility.YES;
 import static net.pterodactylus.fcp.test.InputStreamMatchers.streamContaining;
 import static net.pterodactylus.fcp.test.Matchers.hasField;
+import static net.pterodactylus.fcp.test.NodeRefs.createNodeRef;
 import static net.pterodactylus.fcp.test.PeerMatchers.peerWithIdentity;
+import static net.pterodactylus.fcp.test.Peers.createPeer;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.anything;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -157,102 +170,102 @@ public class FcpClientTest {
 	}
 
 	@Test
-	public void getPeersWithMetadataFlagSetSendsCorrectMessage() throws Exception {
+	public void getPeersWithMetadataFlagSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getPeers, true, false, contains(hasField("WithMetadata", equalTo("true"))), anything());
 	}
 
 	@Test
-	public void getPeersWithMetadataFlagNotSetSendsCorrectMessage() throws Exception {
+	public void getPeersWithMetadataFlagNotSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getPeers, false, false, contains(hasField("WithMetadata", equalTo("false"))), anything());
 	}
 
 	@Test
-	public void getPeersWithVolatileFlagSetSendsCorrectMessage() throws Exception {
+	public void getPeersWithVolatileFlagSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getPeers, false, true, contains(hasField("WithVolatile", equalTo("true"))), anything());
 	}
 
 	@Test
-	public void getPeersWithVolatileFlagNotSetSendsCorrectMessage() throws Exception {
+	public void getPeersWithVolatileFlagNotSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getPeers, false, false, contains(hasField("WithVolatile", equalTo("false"))), anything());
 	}
 
 	@Test
-	public void getPeersReturnsPeersWithCorrectIdentifier() throws Exception {
+	public void getPeersReturnsPeersWithCorrectIdentifier() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getPeers, false, false, anything(), containsInAnyOrder(peerWithIdentity(equalTo("1")), peerWithIdentity(equalTo("2")), peerWithIdentity(equalTo("3"))));
 	}
 
 	@Test
-	public void getDarknetPeersWithMetadataFlagSetSendsCorrectMessage() throws Exception {
+	public void getDarknetPeersWithMetadataFlagSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getDarknetPeers, true, false, contains(hasField("WithMetadata", equalTo("true"))), anything());
 	}
 
 	@Test
-	public void getDarknetPeersWithMetadataFlagNotSetSendsCorrectMessage() throws Exception {
+	public void getDarknetPeersWithMetadataFlagNotSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getDarknetPeers, false, false, contains(hasField("WithMetadata", equalTo("false"))), anything());
 	}
 
 	@Test
-	public void getDarknetPeersWithVolatileFlagSetSendsCorrectMessage() throws Exception {
+	public void getDarknetPeersWithVolatileFlagSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getDarknetPeers, false, true, contains(hasField("WithVolatile", equalTo("true"))), anything());
 	}
 
 	@Test
-	public void getDarknetPeersWithVolatileFlagNotSetSendsCorrectMessage() throws Exception {
+	public void getDarknetPeersWithVolatileFlagNotSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getDarknetPeers, false, false, contains(hasField("WithVolatile", equalTo("false"))), anything());
 	}
 
 	@Test
-	public void getDarknetPeersReturnsPeersWithCorrectIdentifier() throws Exception {
+	public void getDarknetPeersReturnsPeersWithCorrectIdentifier() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getDarknetPeers, false, false, anything(), contains(peerWithIdentity(equalTo("3"))));
 	}
 
 	@Test
-	public void getOpennetPeersWithMetadataFlagSetSendsCorrectMessage() throws Exception {
+	public void getOpennetPeersWithMetadataFlagSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getOpennetPeers, true, false, contains(hasField("WithMetadata", equalTo("true"))), anything());
 	}
 
 	@Test
-	public void getOpennetPeersWithMetadataFlagNotSetSendsCorrectMessage() throws Exception {
+	public void getOpennetPeersWithMetadataFlagNotSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getOpennetPeers, false, false, contains(hasField("WithMetadata", equalTo("false"))), anything());
 	}
 
 	@Test
-	public void getOpennetPeersWithVolatileFlagSetSendsCorrectMessage() throws Exception {
+	public void getOpennetPeersWithVolatileFlagSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getOpennetPeers, false, true, contains(hasField("WithVolatile", equalTo("true"))), anything());
 	}
 
 	@Test
-	public void getOpennetPeersWithVolatileFlagNotSetSendsCorrectMessage() throws Exception {
+	public void getOpennetPeersWithVolatileFlagNotSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getOpennetPeers, false, false, contains(hasField("WithVolatile", equalTo("false"))), anything());
 	}
 
 	@Test
-	public void getOpennetPeersReturnsPeersWithCorrectIdentifier() throws Exception {
+	public void getOpennetPeersReturnsPeersWithCorrectIdentifier() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getOpennetPeers, false, false, anything(), contains(peerWithIdentity(equalTo("1"))));
 	}
 
 	@Test
-	public void getSeedPeersWithMetadataFlagSetSendsCorrectMessage() throws Exception {
+	public void getSeedPeersWithMetadataFlagSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getSeedPeers, true, false, contains(hasField("WithMetadata", equalTo("true"))), anything());
 	}
 
 	@Test
-	public void getSeedPeersWithMetadataFlagNotSetSendsCorrectMessage() throws Exception {
+	public void getSeedPeersWithMetadataFlagNotSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getSeedPeers, false, false, contains(hasField("WithMetadata", equalTo("false"))), anything());
 	}
 
 	@Test
-	public void getSeedPeersWithVolatileFlagSetSendsCorrectMessage() throws Exception {
+	public void getSeedPeersWithVolatileFlagSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getSeedPeers, false, true, contains(hasField("WithVolatile", equalTo("true"))), anything());
 	}
 
 	@Test
-	public void getSeedPeersWithVolatileFlagNotSetSendsCorrectMessage() throws Exception {
+	public void getSeedPeersWithVolatileFlagNotSetSendsCorrectMessage() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getSeedPeers, false, false, contains(hasField("WithVolatile", equalTo("false"))), anything());
 	}
 
 	@Test
-	public void getSeedPeersReturnsPeersWithCorrectIdentifier() throws Exception {
+	public void getSeedPeersReturnsPeersWithCorrectIdentifier() {
 		sendListPeersAndVerifySentMessagesAndReturnedPeers(FcpClientTest::getSeedPeers, false, false, anything(), contains(peerWithIdentity(equalTo("2"))));
 	}
 
@@ -296,7 +309,7 @@ public class FcpClientTest {
 		};
 	}
 
-	private static void sendListPeersAndVerifySentMessagesAndReturnedPeers(Function<FcpClient, BiFunction<Boolean, Boolean, Collection<Peer>>> peerRetrieval, boolean withMetadataFlag, boolean withVolatileFlag, Matcher<? super Iterable<? extends FcpMessage>> sentMessagesMatcher, Matcher<? super Collection<Peer>> peersMatcher) throws IOException, FcpException {
+	private static void sendListPeersAndVerifySentMessagesAndReturnedPeers(Function<FcpClient, BiFunction<Boolean, Boolean, Collection<Peer>>> peerRetrieval, boolean withMetadataFlag, boolean withVolatileFlag, Matcher<? super Iterable<? extends FcpMessage>> sentMessagesMatcher, Matcher<? super Collection<Peer>> peersMatcher) {
 		List<FcpMessage> sentMessages = new ArrayList<>();
 		FcpConnection fcpConnection = createFcpConnection(message -> {
 			if (message.getName().equals("ListPeers")) {
@@ -317,6 +330,125 @@ public class FcpClientTest {
 			Collection<Peer> peers = peerRetrieval.apply(fcpClient).apply(withMetadataFlag, withVolatileFlag);
 			assertThat(sentMessages, sentMessagesMatcher);
 			assertThat(peers, peersMatcher);
+		}
+	}
+
+	@Test
+	public void addPeerWithPeerAndTrustLowAndVisibilityNoSendsCorrectAddPeerMessage() {
+		addPeerAndVerifySendMessage(addPeerWithPeer(createPeer()), LOW, NO);
+	}
+
+	@Test
+	public void addPeerWithPeerAndTrustNormalAndVisibilityNameOnlySendsCorrectAddPeerMessage() {
+		addPeerAndVerifySendMessage(addPeerWithPeer(createPeer()), NORMAL, NAME_ONLY);
+	}
+
+	@Test
+	public void addPeerWithPeerAndTrustHighAndVisibilityYesSendsCorrectAddPeerMessage() {
+		addPeerAndVerifySendMessage(addPeerWithPeer(createPeer()), HIGH, YES);
+	}
+
+	@Test
+	public void addPeerWithNodeRefAndTrustLowAndVisibilityNoSendsCorrectAddPeerMessage() {
+		addPeerAndVerifySendMessage(addPeerWithNodeRef(createNodeRef()), LOW, NO);
+	}
+
+	@Test
+	public void addPeerWithNodeRefAndTrustNormalAndVisibilityNameOnlySendsCorrectAddPeerMessage() {
+		addPeerAndVerifySendMessage(addPeerWithNodeRef(createNodeRef()), NORMAL, NAME_ONLY);
+	}
+
+	@Test
+	public void addPeerWithNodeRefAndTrustHighAndVisibilityYesSendsCorrectAddPeerMessage() {
+		addPeerAndVerifySendMessage(addPeerWithNodeRef(createNodeRef()), HIGH, YES);
+	}
+
+	@Test
+	public void addPeerWithUrlAndTrustLowAndVisibilityNoSendsCorrectAddPeerMessage() throws Exception {
+		addPeerAndVerifySendMessage(addPeerWithUrl(new URL("http://test.test/")), LOW, NO, hasField("URL", equalTo("http://test.test/")));
+	}
+
+	@Test
+	public void addPeerWithUrlAndTrustNormalAndVisibilityNameOnlySendsCorrectAddPeerMessage() throws Exception {
+		addPeerAndVerifySendMessage(addPeerWithUrl(new URL("http://test.test/")), NORMAL, NAME_ONLY, hasField("URL", equalTo("http://test.test/")));
+	}
+
+	@Test
+	public void addPeerWithUrlAndTrustHighAndVisibilityYesSendsCorrectAddPeerMessage() throws Exception {
+		addPeerAndVerifySendMessage(addPeerWithUrl(new URL("http://test.test/")), HIGH, YES, hasField("URL", equalTo("http://test.test/")));
+	}
+
+	@Test
+	public void addPeerWithFileAndTrustLowAndVisibilityNoSendsCorrectAddPeerMessage() {
+		addPeerAndVerifySendMessage(addPeerWithFile(), LOW, NO, hasField("File", equalTo("/some/node.ref")));
+	}
+
+	@Test
+	public void addPeerWithFileAndTrustNormalAndVisibilityNameOnlySendsCorrectAddPeerMessage() {
+		addPeerAndVerifySendMessage(addPeerWithFile(), NORMAL, NAME_ONLY, hasField("File", equalTo("/some/node.ref")));
+	}
+
+	@Test
+	public void addPeerWithFileAndTrustHighAndVisibilityYesSendsCorrectAddPeerMessage() {
+		addPeerAndVerifySendMessage(addPeerWithFile(), HIGH, YES, hasField("File", equalTo("/some/node.ref")));
+	}
+
+	private static Function<FcpClient, BiConsumer<Trust, Visibility>> addPeerWithPeer(Peer peer) {
+		return fcpClient -> (trust, visibility) -> {
+			try {
+				fcpClient.addPeer(peer, trust, visibility);
+			} catch (IOException | FcpException e) {
+				throw new RuntimeException(e);
+			}
+		};
+	}
+
+	private static Function<FcpClient, BiConsumer<Trust, Visibility>> addPeerWithNodeRef(NodeRef nodeRef) {
+		return fcpClient -> (trust, visibility) -> {
+			try {
+				fcpClient.addPeer(nodeRef, trust, visibility);
+			} catch (IOException | FcpException e) {
+				throw new RuntimeException(e);
+			}
+		};
+	}
+
+	private static Function<FcpClient, BiConsumer<Trust, Visibility>> addPeerWithUrl(URL url) {
+		return fcpClient -> (trust, visibility) -> {
+			try {
+				fcpClient.addPeer(url, trust, visibility);
+			} catch (IOException | FcpException e) {
+				throw new RuntimeException(e);
+			}
+		};
+	}
+
+	private static Function<FcpClient, BiConsumer<Trust, Visibility>> addPeerWithFile() {
+		return fcpClient -> (trust, visibility) -> {
+			try {
+				fcpClient.addPeer("/some/node.ref", trust, visibility);
+			} catch (IOException | FcpException e) {
+				throw new RuntimeException(e);
+			}
+		};
+	}
+
+	private static void addPeerAndVerifySendMessage(Function<FcpClient, BiConsumer<Trust, Visibility>> addPeer, Trust trust, Visibility visibility) {
+		addPeerAndVerifySendMessage(addPeer, trust, visibility, anything());
+	}
+
+	private static void addPeerAndVerifySendMessage(Function<FcpClient, BiConsumer<Trust, Visibility>> addPeer, Trust trust, Visibility visibility, Matcher<? super FcpMessage> messageMatcher) {
+		List<FcpMessage> sentMessages = new ArrayList<>();
+		FcpConnection fcpConnection = createFcpConnection(message -> {
+			if (message.getName().equals("AddPeer")) {
+				sentMessages.add(message);
+				return (listener, connection) -> listener.receivedPeer(connection, new Peer(null));
+			}
+			return FcpClientTest::doNothing;
+		});
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			addPeer.apply(fcpClient).accept(trust, visibility);
+			assertThat(sentMessages, contains(allOf(hasField("Trust", equalTo(trust.name())), hasField("Visibility", equalTo(visibility.name())), messageMatcher)));
 		}
 	}
 
@@ -364,7 +496,7 @@ public class FcpClientTest {
 			}
 
 			@Override
-			public void connect() throws IOException, IllegalStateException {
+			public void connect() throws IllegalStateException {
 			}
 
 			@Override

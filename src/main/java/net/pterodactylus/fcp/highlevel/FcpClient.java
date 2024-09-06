@@ -37,6 +37,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 import net.pterodactylus.fcp.AddPeer;
+import net.pterodactylus.fcp.AddPeer.Trust;
+import net.pterodactylus.fcp.AddPeer.Visibility;
 import net.pterodactylus.fcp.AllData;
 import net.pterodactylus.fcp.ClientGet;
 import net.pterodactylus.fcp.ClientHello;
@@ -568,8 +570,8 @@ public class FcpClient implements Closeable {
 	 * @throws FcpException
 	 *             if an FCP error occurs
 	 */
-	public void addPeer(Peer peer) throws IOException, FcpException {
-		addPeer(peer.getNodeRef());
+	public void addPeer(Peer peer, Trust trust, Visibility visibility) throws IOException, FcpException {
+		addPeer(peer.getNodeRef(), trust, visibility);
 	}
 
 	/**
@@ -582,8 +584,8 @@ public class FcpClient implements Closeable {
 	 * @throws FcpException
 	 *             if an FCP error occurs
 	 */
-	public void addPeer(NodeRef nodeRef) throws IOException, FcpException {
-		addPeer(new AddPeer(null, null, nodeRef)); // FIXME – add parameters
+	public void addPeer(NodeRef nodeRef, Trust trust, Visibility visibility) throws IOException, FcpException {
+		addPeer(new AddPeer(trust, visibility, nodeRef));
 	}
 
 	/**
@@ -596,8 +598,8 @@ public class FcpClient implements Closeable {
 	 * @throws FcpException
 	 *             if an FCP error occurs
 	 */
-	public void addPeer(URL url) throws IOException, FcpException {
-		addPeer(new AddPeer(null, null, url)); // FIXME – add parameters
+	public void addPeer(URL url, Trust trust, Visibility visibility) throws IOException, FcpException {
+		addPeer(new AddPeer(trust, visibility, url)); // FIXME – add parameters
 	}
 
 	/**
@@ -612,15 +614,15 @@ public class FcpClient implements Closeable {
 	 * @throws FcpException
 	 *             if an FCP error occurs
 	 */
-	public void addPeer(String file) throws IOException, FcpException {
-		addPeer(new AddPeer(null, null, file)); // FIXME – add parameters
+	public void addPeer(String file, Trust trust, Visibility visibility) throws IOException, FcpException {
+		addPeer(new AddPeer(trust, visibility, file)); // FIXME – add parameters
 	}
 
 	/**
 	 * Sends the given {@link AddPeer} message to the node. This method should
-	 * not be called directly. Use one of {@link #addPeer(Peer)},
-	 * {@link #addPeer(NodeRef)}, {@link #addPeer(URL)}, or
-	 * {@link #addPeer(String)} instead.
+	 * not be called directly. Use one of {@link #addPeer(Peer, Trust, Visibility)},
+	 * {@link #addPeer(Peer, Trust, Visibility)}, {@link #addPeer(URL, Trust, Visibility)}, or
+	 * {@link #addPeer(String, Trust, Visibility)} instead.
 	 *
 	 * @param addPeer
 	 *            The “AddPeer” message
