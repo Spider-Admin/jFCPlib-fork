@@ -17,25 +17,7 @@
 
 package net.pterodactylus.fcp.highlevel;
 
-import static com.google.common.collect.FluentIterable.from;
-import static java.util.stream.Collectors.toMap;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.URL;
-import java.net.UnknownHostException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
-
+import com.google.common.base.Predicate;
 import net.pterodactylus.fcp.AddPeer;
 import net.pterodactylus.fcp.AddPeer.Trust;
 import net.pterodactylus.fcp.AddPeer.Visibility;
@@ -79,7 +61,25 @@ import net.pterodactylus.fcp.SSKKeypair;
 import net.pterodactylus.fcp.SimpleProgress;
 import net.pterodactylus.fcp.WatchGlobal;
 
-import com.google.common.base.Predicate;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.URL;
+import java.net.UnknownHostException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static com.google.common.collect.FluentIterable.from;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 /**
  * High-level FCP client that hides the details of the underlying FCP
@@ -502,14 +502,10 @@ public class FcpClient implements Closeable {
 	 *             if an FCP error occurs
 	 */
 	public Collection<Peer> getDarknetPeers(boolean withMetadata, boolean withVolatile) throws IOException, FcpException {
-		Collection<Peer> allPeers = getPeers(withMetadata, withVolatile);
-		Collection<Peer> darknetPeers = new HashSet<Peer>();
-		for (Peer peer : allPeers) {
-			if (!peer.isOpennet() && !peer.isSeed()) {
-				darknetPeers.add(peer);
-			}
-		}
-		return darknetPeers;
+		return getPeers(withMetadata, withVolatile).stream()
+				.filter(peer -> !peer.isOpennet())
+				.filter(peer -> !peer.isSeed())
+				.collect(toList());
 	}
 
 	/**
@@ -526,14 +522,10 @@ public class FcpClient implements Closeable {
 	 *             if an FCP error occurs
 	 */
 	public Collection<Peer> getOpennetPeers(boolean withMetadata, boolean withVolatile) throws IOException, FcpException {
-		Collection<Peer> allPeers = getPeers(withMetadata, withVolatile);
-		Collection<Peer> opennetPeers = new HashSet<Peer>();
-		for (Peer peer : allPeers) {
-			if (peer.isOpennet() && !peer.isSeed()) {
-				opennetPeers.add(peer);
-			}
-		}
-		return opennetPeers;
+		return getPeers(withMetadata, withVolatile).stream()
+				.filter(Peer::isOpennet)
+				.filter(peer -> !peer.isSeed())
+				.collect(toList());
 	}
 
 	/**
@@ -550,14 +542,9 @@ public class FcpClient implements Closeable {
 	 *             if an FCP error occurs
 	 */
 	public Collection<Peer> getSeedPeers(boolean withMetadata, boolean withVolatile) throws IOException, FcpException {
-		Collection<Peer> allPeers = getPeers(withMetadata, withVolatile);
-		Collection<Peer> seedPeers = new HashSet<Peer>();
-		for (Peer peer : allPeers) {
-			if (peer.isSeed()) {
-				seedPeers.add(peer);
-			}
-		}
-		return seedPeers;
+		return getPeers(withMetadata, withVolatile).stream()
+				.filter(Peer::isSeed)
+				.collect(toList());
 	}
 
 	/**
