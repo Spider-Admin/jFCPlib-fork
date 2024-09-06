@@ -81,7 +81,7 @@ public class Matchers {
 		};
 	}
 
-	public static <V> Matcher<FcpMessage> hasField(String name, Matcher<? super V> valueMatcher) {
+	public static Matcher<FcpMessage> hasField(String name, Matcher<? super String> valueMatcher) {
 		return new TypeSafeDiagnosingMatcher<FcpMessage>() {
 			@Override
 			protected boolean matchesSafely(FcpMessage fcpMessage, Description mismatchDescription) {
