@@ -57,6 +57,7 @@ public class Peer extends BaseMessage implements Identifiable {
 		nodeRef.setOpennet(isOpennet());
 		nodeRef.setPhysicalUDP(getPhysicalUDP());
 		nodeRef.setVersion(getVersion());
+		nodeRef.setSignature(getField("sig"));
 		return nodeRef;
 	}
 
@@ -134,7 +135,7 @@ public class Peer extends BaseMessage implements Identifiable {
 	 * @return The ARK of the peer
 	 */
 	public ARK getARK() {
-		return new ARK(getField("ark.pubURI"), getField("ark.number"));
+		return new ARK(getField("ark.pubURI"), getField("ark.privURI"), getField("ark.number"));
 	}
 
 	/**
@@ -175,7 +176,7 @@ public class Peer extends BaseMessage implements Identifiable {
 	 *         <code>false</code> otherwise
 	 */
 	public boolean isTestnet() {
-		return Boolean.valueOf("testnet");
+		return Boolean.valueOf(getField("testnet"));
 	}
 
 	/**
