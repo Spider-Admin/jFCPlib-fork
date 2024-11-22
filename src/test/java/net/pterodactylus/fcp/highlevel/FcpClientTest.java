@@ -5,6 +5,7 @@ import net.pterodactylus.fcp.AddPeer.Visibility;
 import net.pterodactylus.fcp.AllData;
 import net.pterodactylus.fcp.EndListPeerNotes;
 import net.pterodactylus.fcp.EndListPeers;
+import net.pterodactylus.fcp.EndListPersistentRequests;
 import net.pterodactylus.fcp.FcpConnection;
 import net.pterodactylus.fcp.FcpListener;
 import net.pterodactylus.fcp.FcpMessage;
@@ -15,6 +16,9 @@ import net.pterodactylus.fcp.Peer;
 import net.pterodactylus.fcp.PeerNote;
 import net.pterodactylus.fcp.PeerNoteType;
 import net.pterodactylus.fcp.PeerRemoved;
+import net.pterodactylus.fcp.PersistentGet;
+import net.pterodactylus.fcp.PersistentPut;
+import net.pterodactylus.fcp.PersistentPutDir;
 import net.pterodactylus.fcp.ProtocolError;
 import net.pterodactylus.fcp.SSKKeypair;
 import net.pterodactylus.fcp.UnknownNodeIdentifier;
@@ -47,6 +51,7 @@ import static net.pterodactylus.fcp.test.Matchers.hasField;
 import static net.pterodactylus.fcp.test.NodeRefs.createNodeRef;
 import static net.pterodactylus.fcp.test.PeerMatchers.peerWithIdentity;
 import static net.pterodactylus.fcp.test.Peers.createPeer;
+import static net.pterodactylus.fcp.test.Requests.isGetRequest;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.anything;
@@ -631,6 +636,28 @@ public class FcpClientTest {
 			SSKKeypair keypair = fcpClient.generateKeyPair();
 			assertThat(keypair.getInsertURI(), equalTo("insert-uri"));
 			assertThat(keypair.getRequestURI(), equalTo("request-uri"));
+		}
+	}
+
+	@Test
+	public void getGetRequestsReturnsGetRequests() throws IOException, FcpException {
+		FcpConnection fcpConnection = createFcpConnection(message -> {
+			if (message.getName().equals("ListPersistentRequests")) {
+				return (listener, connection) -> {
+					listener.receivedPersistentGet(connection, new PersistentGet(new FcpMessage("PersistentGet").put("Identifier", "get1")));
+					listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put1")));
+					listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put2")));
+					listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir1")));
+					listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir2")));
+					listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir3")));
+					listener.receivedEndListPersistentRequests(connection, new EndListPersistentRequests(new FcpMessage("EndListPersistentRequests")));
+				};
+			}
+			return FcpClientTest::doNothing;
+		});
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			Collection<Request> getRequests = fcpClient.getGetRequests(false);
+			assertThat(getRequests, contains(isGetRequest(equalTo("get1"))));
 		}
 	}
 

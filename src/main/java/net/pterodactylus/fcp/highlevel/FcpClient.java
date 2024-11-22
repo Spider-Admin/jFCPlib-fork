@@ -919,12 +919,7 @@ public class FcpClient implements Closeable {
 	 *             if an FCP error occurs
 	 */
 	public Collection<Request> getGetRequests(final boolean global) throws IOException, FcpException {
-		return from(getRequests(global)).filter(new Predicate<Request>() {
-			@Override
-			public boolean apply(Request request) {
-				return request instanceof GetRequest;
-			}
-		}).toList();
+		return getRequests(global).stream().filter(request -> request instanceof GetRequest).collect(toList());
 	}
 
 	/**
