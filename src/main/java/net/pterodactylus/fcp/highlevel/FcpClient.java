@@ -906,8 +906,8 @@ public class FcpClient implements Closeable {
 	/**
 	 * Returns all currently visible persistent get requests.
 	 *
-	 * @param global
-	 *            <code>true</code> to return get requests from the global
+	 * @param includeGlobalRequests
+	 *            <code>true</code> to also return get requests from the global
 	 *            queue, <code>false</code> to only show requests from the
 	 *            client-local queue
 	 * @return All get requests
@@ -916,15 +916,15 @@ public class FcpClient implements Closeable {
 	 * @throws FcpException
 	 *             if an FCP error occurs
 	 */
-	public Collection<Request> getGetRequests(final boolean global) throws IOException, FcpException {
-		return getRequests(global).stream().filter(request -> request instanceof GetRequest).collect(toList());
+	public Collection<Request> getGetRequests(boolean includeGlobalRequests) throws IOException, FcpException {
+		return getRequests(includeGlobalRequests).stream().filter(request -> request instanceof GetRequest).collect(toList());
 	}
 
 	/**
 	 * Returns all currently visible persistent put requests.
 	 *
-	 * @param global
-	 *            <code>true</code> to return put requests from the global
+	 * @param includeGlobalRequests
+	 *            <code>true</code> to also return put requests from the global
 	 *            queue, <code>false</code> to only show requests from the
 	 *            client-local queue
 	 * @return All put requests
@@ -933,15 +933,15 @@ public class FcpClient implements Closeable {
 	 * @throws FcpException
 	 *             if an FCP error occurs
 	 */
-	public Collection<Request> getPutRequests(final boolean global) throws IOException, FcpException {
-		return getRequests(global).stream().filter(request -> request instanceof PutRequest).collect(toList());
+	public Collection<Request> getPutRequests(boolean includeGlobalRequests) throws IOException, FcpException {
+		return getRequests(includeGlobalRequests).stream().filter(request -> request instanceof PutRequest).collect(toList());
 	}
 
 	/**
 	 * Returns all currently visible persistent requests.
 	 *
-	 * @param global
-	 *            <code>true</code> to return requests from the global queue,
+	 * @param includeGlobalRequests
+	 *            <code>true</code> to also return requests from the global queue,
 	 *            <code>false</code> to only show requests from the
 	 *            client-local queue
 	 * @return All requests
@@ -950,7 +950,7 @@ public class FcpClient implements Closeable {
 	 * @throws FcpException
 	 *             if an FCP error occurs
 	 */
-	public Collection<Request> getRequests(final boolean global) throws IOException, FcpException {
+	public Collection<Request> getRequests(boolean includeGlobalRequests) throws IOException, FcpException {
 		final Map<String, Request> requests = Collections.synchronizedMap(new HashMap<String, Request>());
 		new ExtendedFcpAdapter() {
 
@@ -968,7 +968,7 @@ public class FcpClient implements Closeable {
 			 */
 			@Override
 			public void receivedPersistentGet(FcpConnection fcpConnection, PersistentGet persistentGet) {
-				if (!persistentGet.isGlobal() || global) {
+				if (!persistentGet.isGlobal() || includeGlobalRequests) {
 					GetRequest getRequest = new GetRequest(persistentGet);
 					requests.put(persistentGet.getIdentifier(), getRequest);
 				}
@@ -1017,7 +1017,7 @@ public class FcpClient implements Closeable {
 			 */
 			@Override
 			public void receivedPersistentPut(FcpConnection fcpConnection, PersistentPut persistentPut) {
-				if (!persistentPut.isGlobal() || global) {
+				if (!persistentPut.isGlobal() || includeGlobalRequests) {
 					PutRequest putRequest = new PutRequest(persistentPut);
 					requests.put(persistentPut.getIdentifier(), putRequest);
 				}
