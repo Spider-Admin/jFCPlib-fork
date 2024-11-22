@@ -14,7 +14,6 @@ import net.pterodactylus.fcp.NodeHello;
 import net.pterodactylus.fcp.NodeRef;
 import net.pterodactylus.fcp.Peer;
 import net.pterodactylus.fcp.PeerNote;
-import net.pterodactylus.fcp.PeerNoteType;
 import net.pterodactylus.fcp.PeerRemoved;
 import net.pterodactylus.fcp.PersistentGet;
 import net.pterodactylus.fcp.PersistentPut;
@@ -38,6 +37,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static net.pterodactylus.fcp.AddPeer.Trust.HIGH;
@@ -531,12 +531,7 @@ public class FcpClientTest {
 	}
 
 	private static void removePeerAndVerifyThatNodeIdentifierIsNotBeingIgnored(BiConsumer<FcpListener, FcpConnection> responseGenerator) {
-		FcpConnection fcpConnection = createFcpConnection(message -> {
-			if (message.getName().equals("RemovePeer")) {
-				return responseGenerator;
-			}
-			return FcpClientTest::doNothing;
-		});
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("RemovePeer"), responseGenerator);
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			FcpProtocolException fcpProtocolException = assertThrows(FcpProtocolException.class, () -> fcpClient.removePeer(createPeer()));
 			assertThat(fcpProtocolException.getCode(), equalTo(123));
@@ -569,12 +564,7 @@ public class FcpClientTest {
 
 	@Test
 	public void getPeerNoteWithInvalidNodeIdentifierReturnsNull() throws Exception {
-		FcpConnection fcpConnection = createFcpConnection(message -> {
-			if (message.getName().equals("ListPeerNotes")) {
-				return (listener, connection) -> listener.receivedEndListPeerNotes(connection, new EndListPeerNotes(new FcpMessage("EndListPeerNotes")));
-			}
-			return FcpClientTest::doNothing;
-		});
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPeerNotes"), (listener, connection) -> listener.receivedEndListPeerNotes(connection, new EndListPeerNotes(new FcpMessage("EndListPeerNotes"))));
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			PeerNote peerNote = fcpClient.getPeerNote(createPeer());
 			assertThat(peerNote, nullValue());
@@ -626,12 +616,7 @@ public class FcpClientTest {
 
 	@Test
 	public void generatingKeyPairSendsCorrectMessage() throws IOException, FcpException {
-		FcpConnection fcpConnection = createFcpConnection(message -> {
-			if (message.getName().equals("GenerateSSK")) {
-				return ((listener, connection) -> listener.receivedSSKKeypair(connection, new SSKKeypair(new FcpMessage("SSKKeypair").put("InsertURI", "insert-uri").put("RequestURI", "request-uri"))));
-			}
-			return FcpClientTest::doNothing;
-		});
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("GenerateSSK"), (listener, connection) -> listener.receivedSSKKeypair(connection, new SSKKeypair(new FcpMessage("SSKKeypair").put("InsertURI", "insert-uri").put("RequestURI", "request-uri"))));
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			SSKKeypair keypair = fcpClient.generateKeyPair();
 			assertThat(keypair.getInsertURI(), equalTo("insert-uri"));
@@ -641,19 +626,14 @@ public class FcpClientTest {
 
 	@Test
 	public void getGetRequestsReturnsGetRequests() throws IOException, FcpException {
-		FcpConnection fcpConnection = createFcpConnection(message -> {
-			if (message.getName().equals("ListPersistentRequests")) {
-				return (listener, connection) -> {
-					listener.receivedPersistentGet(connection, new PersistentGet(new FcpMessage("PersistentGet").put("Identifier", "get1")));
-					listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put1")));
-					listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put2")));
-					listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir1")));
-					listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir2")));
-					listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir3")));
-					listener.receivedEndListPersistentRequests(connection, new EndListPersistentRequests(new FcpMessage("EndListPersistentRequests")));
-				};
-			}
-			return FcpClientTest::doNothing;
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), (listener, connection) -> {
+			listener.receivedPersistentGet(connection, new PersistentGet(new FcpMessage("PersistentGet").put("Identifier", "get1")));
+			listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put1")));
+			listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put2")));
+			listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir1")));
+			listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir2")));
+			listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir3")));
+			listener.receivedEndListPersistentRequests(connection, new EndListPersistentRequests(new FcpMessage("EndListPersistentRequests")));
 		});
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			Collection<Request> getRequests = fcpClient.getGetRequests(false);
@@ -667,6 +647,15 @@ public class FcpClientTest {
 
 	private static FcpConnection createFcpConnection() {
 		return createFcpConnection(m -> FcpClientTest::doNothing);
+	}
+
+	private static FcpConnection createFcpConnectionReactingToSingleMessage(Predicate<FcpMessage> messageFilter, BiConsumer<FcpListener, FcpConnection> messageConsumer) {
+		return createFcpConnection(message -> {
+			if (messageFilter.test(message)) {
+				return messageConsumer;
+			}
+			return FcpClientTest::doNothing;
+		});
 	}
 
 	private static FcpConnection createFcpConnection(Function<FcpMessage, BiConsumer<FcpListener, FcpConnection>> messageConsumer) {
@@ -709,6 +698,10 @@ public class FcpClientTest {
 				listeners.forEach(listener -> new Thread(() -> listenerNotifier.accept(listener, this)).start());
 			}
 		};
+	}
+
+	private static Predicate<FcpMessage> named(String name) {
+		return message -> message.getName().equals(name);
 	}
 
 	@Rule
