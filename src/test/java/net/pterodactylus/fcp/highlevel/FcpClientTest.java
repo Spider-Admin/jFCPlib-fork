@@ -643,13 +643,42 @@ public class FcpClientTest {
 		}
 	}
 
+	@Test
+	public void getGetRequestsWithGlobalReturnsGlobalGetRequests() throws IOException, FcpException {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), this::sendRequests);
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			Collection<Request> requests = fcpClient.getGetRequests(true);
+			assertThat(requests, containsInAnyOrder(isGetRequest(equalTo("get1")), isGetRequest(equalTo("get1-global"))));
+		}
+	}
+
+	@Test
+	public void getPutRequestsWithGlobalReturnsGlobalPutRequests() throws IOException, FcpException {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), this::sendRequests);
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			Collection<Request> requests = fcpClient.getPutRequests(true);
+			assertThat(requests, containsInAnyOrder(
+					isPutRequest(equalTo("put1")),
+					isPutRequest(equalTo("put2")),
+					isPutRequest(equalTo("put1-global")),
+					isPutRequest(equalTo("put2-global"))
+			));
+		}
+	}
+
 	private void sendRequests(FcpListener listener, FcpConnection connection) {
-		listener.receivedPersistentGet(connection, new PersistentGet(new FcpMessage("PersistentGet").put("Identifier", "get1")));
-		listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put1")));
-		listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put2")));
-		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir1")));
-		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir2")));
-		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir3")));
+		listener.receivedPersistentGet(connection, new PersistentGet(new FcpMessage("PersistentGet").put("Identifier", "get1").put("Global", "false")));
+		listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put1").put("Global", "false")));
+		listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put2").put("Global", "false")));
+		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir1").put("Global", "false")));
+		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir2").put("Global", "false")));
+		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir3").put("Global", "false")));
+		listener.receivedPersistentGet(connection, new PersistentGet(new FcpMessage("PersistentGet").put("Identifier", "get1-global").put("Global", "true")));
+		listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put1-global").put("Global", "true")));
+		listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put2-global").put("Global", "true")));
+		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir1-global").put("Global", "true")));
+		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir2-global").put("Global", "true")));
+		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir3-global").put("Global", "true")));
 		listener.receivedEndListPersistentRequests(connection, new EndListPersistentRequests(new FcpMessage("EndListPersistentRequests")));
 	}
 
