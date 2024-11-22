@@ -12,6 +12,15 @@ import static org.hamcrest.Matchers.instanceOf;
 
 public class Requests {
 
+	public static Matcher<Request> isRequest() {
+		return isRequest(anything());
+	}
+
+	@SafeVarargs
+	public static Matcher<Request> isRequest(Matcher<? super String> identifier, Matcher<? super Request>... requestMatchers) {
+		return isRequest(anything(), identifier, requestMatchers);
+	}
+
 	public static Matcher<Request> isGetRequest() {
 		return isGetRequest(anything());
 	}

@@ -56,6 +56,7 @@ import static net.pterodactylus.fcp.test.PeerMatchers.peerWithIdentity;
 import static net.pterodactylus.fcp.test.Peers.createPeer;
 import static net.pterodactylus.fcp.test.Requests.isGetRequest;
 import static net.pterodactylus.fcp.test.Requests.isPutRequest;
+import static net.pterodactylus.fcp.test.Requests.isRequest;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.anything;
@@ -683,9 +684,31 @@ public class FcpClientTest {
 		}
 	}
 
+	@Test
+	public void getRequestsIgnoresDataFoundForUnknownIdentifier() throws IOException, FcpException {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::sendDataFoundForUnknownIdentifier));
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			Collection<Request> requests = fcpClient.getRequests(true);
+			assertThat(requests, containsInAnyOrder(
+					isRequest(equalTo("get1"), matches("complete", m -> !m.isComplete())),
+					isRequest(equalTo("get1-global"), matches("complete", m -> !m.isComplete())),
+					isRequest(equalTo("put1"), matches("complete", m -> !m.isComplete())),
+					isRequest(equalTo("put1-global"), matches("complete", m -> !m.isComplete())),
+					isRequest(equalTo("put2"), matches("complete", m -> !m.isComplete())),
+					isRequest(equalTo("put2-global"), matches("complete", m -> !m.isComplete()))
+			));
+		}
+	}
+
 	private void sendDataFound(FcpListener listener, FcpConnection connection) {
 		listener.receivedDataFound(connection, new DataFound(
 				new FcpMessage("DataFound").put("Identifier", "get1").put("Metadata.ContentType", "application/test").put("DataLength", "12345"))
+		);
+	}
+
+	private void sendDataFoundForUnknownIdentifier(FcpListener listener, FcpConnection connection) {
+		listener.receivedDataFound(connection, new DataFound(
+				new FcpMessage("DataFound").put("Identifier", "unknown").put("Metadata.ContentType", "application/test").put("DataLength", "12345"))
 		);
 	}
 
