@@ -13,6 +13,7 @@ import net.pterodactylus.fcp.NodeHello;
 import net.pterodactylus.fcp.NodeRef;
 import net.pterodactylus.fcp.Peer;
 import net.pterodactylus.fcp.PeerNote;
+import net.pterodactylus.fcp.PeerNoteType;
 import net.pterodactylus.fcp.PeerRemoved;
 import net.pterodactylus.fcp.ProtocolError;
 import net.pterodactylus.fcp.SSKKeypair;
@@ -576,6 +577,49 @@ public class FcpClientTest {
 	}
 
 	@Test
+	public void modifyPeerNoteSendsCorrectMessage() throws Exception {
+		FcpConnection fcpConnection = createFcpConnection(message -> {
+			if (message.getName().equals("ModifyPeerNote") && message.getField("NoteText").equals("bmV3IG5vdGU=")) {
+				return (listener, connection) -> {
+					listener.receivedPeerNote(connection, new PeerNote(new FcpMessage("PeerNote").put("NodeIdentifier", message.getField("NodeIdentifier"))));
+				};
+			}
+			return FcpClientTest::doNothing;
+		});
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			fcpClient.modifyPeerNote(createPeer(), "new note");
+		}
+	}
+
+	@Test
+	public void modifyPeerNoteWaitsForCorrectPeerNoteReturnMessage() throws Exception {
+		FcpConnection fcpConnection = createFcpConnection(message -> {
+			if (message.getName().equals("ModifyPeerNote")) {
+				return (listener, connection) -> {
+					listener.receivedPeerNote(connection, new PeerNote(new FcpMessage("PeerNote").put("NodeIdentifier", "different-node")));
+					try {
+						Thread.sleep(6000);
+					} catch (InterruptedException e) {
+						throw new RuntimeException(e);
+					}
+					listener.receivedPeerNote(connection, new PeerNote(new FcpMessage("PeerNote").put("NodeIdentifier", message.getField("NodeIdentifier"))));
+				};
+			}
+			return FcpClientTest::doNothing;
+		});
+		Thread thread = new Thread(() -> {
+			try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+				fcpClient.modifyPeerNote(createPeer(), "new note");
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		});
+		thread.start();
+		Thread.sleep(1000);
+		assertThat(thread.isAlive(), equalTo(true));
+	}
+
+	@Test
 	public void generatingKeyPairSendsCorrectMessage() throws IOException, FcpException {
 		FcpConnection fcpConnection = createFcpConnection(message -> {
 			if (message.getName().equals("GenerateSSK")) {
@@ -635,7 +679,7 @@ public class FcpClientTest {
 			@Override
 			public void sendMessage(FcpMessage fcpMessage) {
 				BiConsumer<FcpListener, FcpConnection> listenerNotifier = messageConsumer.apply(fcpMessage);
-				new Thread(() -> listeners.forEach(listener -> listenerNotifier.accept(listener, this))).start();
+				listeners.forEach(listener -> new Thread(() -> listenerNotifier.accept(listener, this)).start());
 			}
 		};
 	}

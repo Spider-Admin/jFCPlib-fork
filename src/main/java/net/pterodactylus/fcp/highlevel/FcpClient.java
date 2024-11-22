@@ -52,6 +52,7 @@ import net.pterodactylus.fcp.NodeHello;
 import net.pterodactylus.fcp.NodeRef;
 import net.pterodactylus.fcp.Peer;
 import net.pterodactylus.fcp.PeerNote;
+import net.pterodactylus.fcp.PeerNoteType;
 import net.pterodactylus.fcp.PeerRemoved;
 import net.pterodactylus.fcp.PersistentGet;
 import net.pterodactylus.fcp.PersistentPut;
@@ -803,6 +804,22 @@ public class FcpClient implements Closeable {
 	}
 
 	/**
+	 * Replaces the private darknet comment peer note for the given peer.
+	 *
+	 * @param peer
+	 *            The peer
+	 * @param noteText
+	 *            The new base64-encoded note text
+	 * @throws IOException
+	 *             if an I/O error occurs
+	 * @throws FcpException
+	 *             if an FCP error occurs
+	 */
+	public void modifyPeerNote(final Peer peer, final String noteText) throws IOException, FcpException {
+		modifyPeerNote(peer, noteText, 1);
+	}
+
+	/**
 	 * Replaces the peer note for the given peer.
 	 *
 	 * @param peer
@@ -816,7 +833,9 @@ public class FcpClient implements Closeable {
 	 *             if an I/O error occurs
 	 * @throws FcpException
 	 *             if an FCP error occurs
+	 * @deprecated Use {@link #modifyPeerNote(Peer, String)} instead
 	 */
+	@Deprecated
 	public void modifyPeerNote(final Peer peer, final String noteText, final int noteType) throws IOException, FcpException {
 		new ExtendedFcpAdapter() {
 
@@ -826,15 +845,18 @@ public class FcpClient implements Closeable {
 			@Override
 			@SuppressWarnings("synthetic-access")
 			public void run() throws IOException {
-				sendMessage(new ModifyPeerNote(peer.getIdentity(), noteText, noteType));
+				ModifyPeerNote modifyPeerNote = new ModifyPeerNote(createIdentifier("modify-peer-note"), peer.getIdentity());
+				modifyPeerNote.setNoteText(noteText);
+				modifyPeerNote.setPeerNoteType(PeerNoteType.PRIVATE_DARKNET_COMMENT);
+				sendMessage(modifyPeerNote);
 			}
 
 			/**
 			 * {@inheritDoc}
 			 */
 			@Override
-			public void receivedPeer(FcpConnection fcpConnection, Peer receivedPeer) {
-				if (receivedPeer.getIdentity().equals(peer.getIdentity())) {
+			public void receivedPeerNote(FcpConnection fcpConnection, PeerNote receivedPeerNote) {
+				if (receivedPeerNote.getNodeIdentifier().equals(peer.getIdentity())) {
 					complete();
 				}
 			}
