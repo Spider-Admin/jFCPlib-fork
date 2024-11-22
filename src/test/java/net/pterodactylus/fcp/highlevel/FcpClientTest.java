@@ -3,6 +3,7 @@ package net.pterodactylus.fcp.highlevel;
 import net.pterodactylus.fcp.AddPeer.Trust;
 import net.pterodactylus.fcp.AddPeer.Visibility;
 import net.pterodactylus.fcp.AllData;
+import net.pterodactylus.fcp.DataFound;
 import net.pterodactylus.fcp.EndListPeerNotes;
 import net.pterodactylus.fcp.EndListPeers;
 import net.pterodactylus.fcp.EndListPersistentRequests;
@@ -40,6 +41,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Arrays.stream;
 import static net.pterodactylus.fcp.AddPeer.Trust.HIGH;
 import static net.pterodactylus.fcp.AddPeer.Trust.LOW;
 import static net.pterodactylus.fcp.AddPeer.Trust.NORMAL;
@@ -48,6 +50,7 @@ import static net.pterodactylus.fcp.AddPeer.Visibility.NO;
 import static net.pterodactylus.fcp.AddPeer.Visibility.YES;
 import static net.pterodactylus.fcp.test.InputStreamMatchers.streamContaining;
 import static net.pterodactylus.fcp.test.Matchers.hasField;
+import static net.pterodactylus.fcp.test.Matchers.matches;
 import static net.pterodactylus.fcp.test.NodeRefs.createNodeRef;
 import static net.pterodactylus.fcp.test.PeerMatchers.peerWithIdentity;
 import static net.pterodactylus.fcp.test.Peers.createPeer;
@@ -666,6 +669,26 @@ public class FcpClientTest {
 		}
 	}
 
+	@Test
+	public void getGetRequestsIsCompleteWhenDataFoundMessageIsReceived() throws IOException, FcpException {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::sendDataFound));
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			Collection<Request> requests = fcpClient.getGetRequests(false);
+			assertThat(requests, contains(isGetRequest(
+					equalTo("get1"),
+					matches("complete", Request::isComplete),
+					matches("content type", m -> m.getContentType().equals("application/test")),
+					matches("data length", m -> m.getLength() == 12345L)
+			)));
+		}
+	}
+
+	private void sendDataFound(FcpListener listener, FcpConnection connection) {
+		listener.receivedDataFound(connection, new DataFound(
+				new FcpMessage("DataFound").put("Identifier", "get1").put("Metadata.ContentType", "application/test").put("DataLength", "12345"))
+		);
+	}
+
 	private void sendRequests(FcpListener listener, FcpConnection connection) {
 		listener.receivedPersistentGet(connection, new PersistentGet(new FcpMessage("PersistentGet").put("Identifier", "get1").put("Global", "false")));
 		listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put1").put("Global", "false")));
@@ -680,6 +703,13 @@ public class FcpClientTest {
 		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir2-global").put("Global", "true")));
 		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir3-global").put("Global", "true")));
 		listener.receivedEndListPersistentRequests(connection, new EndListPersistentRequests(new FcpMessage("EndListPersistentRequests")));
+	}
+
+	@SafeVarargs
+	private final BiConsumer<FcpListener, FcpConnection> sendRequests(BiConsumer<FcpListener, FcpConnection>... messageConsumers) {
+		return (listener, connection) -> {
+			stream(messageConsumers).forEach(consumer -> consumer.accept(listener, connection));
+		};
 	}
 
 	private static void doNothing(FcpListener listener, FcpConnection connection) {

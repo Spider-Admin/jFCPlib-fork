@@ -1,14 +1,15 @@
 package net.pterodactylus.fcp.test;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
 import net.pterodactylus.fcp.FcpMessage;
-
+import net.pterodactylus.fcp.highlevel.Request;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.function.Predicate;
 
 import static org.hamcrest.Matchers.anything;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -96,6 +97,24 @@ public class Matchers {
 			@Override
 			public void describeTo(Description description) {
 				description.appendText("has field ").appendValue(name).appendText(" with value ").appendDescriptionOf(valueMatcher);
+			}
+		};
+	}
+
+	public static <R extends Request> Matcher<R> matches(String name, Predicate<R> predicate) {
+		return new TypeSafeDiagnosingMatcher<R>() {
+			@Override
+			protected boolean matchesSafely(R item, Description mismatchDescription) {
+				if (!predicate.test(item)) {
+					mismatchDescription.appendText("not ").appendValue(name);
+					return false;
+				}
+				return true;
+			}
+
+			@Override
+			public void describeTo(Description description) {
+				description.appendText(name);
 			}
 		};
 	}

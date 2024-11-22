@@ -16,8 +16,9 @@ public class Requests {
 		return isGetRequest(anything());
 	}
 
-	public static Matcher<Request> isGetRequest(Matcher<? super String> identifier) {
-		return isRequest(instanceOf(GetRequest.class), identifier);
+	@SafeVarargs
+	public static Matcher<Request> isGetRequest(Matcher<? super String> identifier, Matcher<? super Request>... requestMatchers) {
+		return isRequest(instanceOf(GetRequest.class), identifier, requestMatchers);
 	}
 
 	public static Matcher<Request> isPutRequest() {
@@ -28,7 +29,8 @@ public class Requests {
 		return isRequest(instanceOf(PutRequest.class), identifier);
 	}
 
-	private static TypeSafeDiagnosingMatcher<Request> isRequest(Matcher<? super Class<?>> requestClass, Matcher<? super String> identifier) {
+	@SafeVarargs
+	private static TypeSafeDiagnosingMatcher<Request> isRequest(Matcher<? super Class<?>> requestClass, Matcher<? super String> identifier, Matcher<? super Request>... requestMatchers) {
 		return new TypeSafeDiagnosingMatcher<Request>() {
 			@Override
 			protected boolean matchesSafely(Request item, Description mismatchDescription) {
@@ -39,6 +41,12 @@ public class Requests {
 				if (!identifier.matches(item.getIdentifier())) {
 					mismatchDescription.appendText("identifier is ").appendValue(item.getIdentifier());
 					return false;
+				}
+				for (Matcher<? super Request> requestMatcher : requestMatchers) {
+					if (!requestMatcher.matches(item)) {
+						requestMatcher.describeMismatch(item, mismatchDescription);
+						return false;
+					}
 				}
 				return true;
 			}
