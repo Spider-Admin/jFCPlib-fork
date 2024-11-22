@@ -3,6 +3,7 @@ package net.pterodactylus.fcp.highlevel;
 import net.pterodactylus.fcp.AddPeer.Trust;
 import net.pterodactylus.fcp.AddPeer.Visibility;
 import net.pterodactylus.fcp.AllData;
+import net.pterodactylus.fcp.EndListPeerNotes;
 import net.pterodactylus.fcp.EndListPeers;
 import net.pterodactylus.fcp.FcpConnection;
 import net.pterodactylus.fcp.FcpListener;
@@ -11,6 +12,7 @@ import net.pterodactylus.fcp.GetFailed;
 import net.pterodactylus.fcp.NodeHello;
 import net.pterodactylus.fcp.NodeRef;
 import net.pterodactylus.fcp.Peer;
+import net.pterodactylus.fcp.PeerNote;
 import net.pterodactylus.fcp.PeerRemoved;
 import net.pterodactylus.fcp.ProtocolError;
 import net.pterodactylus.fcp.SSKKeypair;
@@ -24,6 +26,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -31,6 +34,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static net.pterodactylus.fcp.AddPeer.Trust.HIGH;
 import static net.pterodactylus.fcp.AddPeer.Trust.LOW;
 import static net.pterodactylus.fcp.AddPeer.Trust.NORMAL;
@@ -48,6 +52,7 @@ import static org.hamcrest.Matchers.anything;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThrows;
 
 public class FcpClientTest {
@@ -529,6 +534,44 @@ public class FcpClientTest {
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			FcpProtocolException fcpProtocolException = assertThrows(FcpProtocolException.class, () -> fcpClient.removePeer(createPeer()));
 			assertThat(fcpProtocolException.getCode(), equalTo(123));
+		}
+	}
+
+	@Test
+	public void getPeerNoteReturnsPeerNote() throws Exception {
+		FcpConnection fcpConnection = createFcpConnection(message -> {
+			if (message.getName().equals("ListPeerNotes")) {
+				return (listener, connection) -> {
+					FcpMessage receivedMessage = new FcpMessage("PeerNote");
+					receivedMessage.setField("NodeIdentifier", message.getField("NodeIdentifier"));
+					receivedMessage.setField("PeerNoteType", "1");
+					receivedMessage.setField("NoteText", Base64.getEncoder().encodeToString("Peer Note".getBytes(UTF_8)));
+					listener.receivedPeerNote(connection, new PeerNote(new FcpMessage("PeerNote").put("NodeIdentifier", "different-node")));
+					listener.receivedPeerNote(connection, new PeerNote(receivedMessage));
+					listener.receivedEndListPeerNotes(connection, new EndListPeerNotes(new FcpMessage("EndListPeerNotes")));
+				};
+			}
+			return FcpClientTest::doNothing;
+		});
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			PeerNote peerNote = fcpClient.getPeerNote(createPeer());
+			assertThat(peerNote.getNodeIdentifier(), equalTo("identity"));
+			assertThat(peerNote.getPeerNoteType(), equalTo(1));
+			assertThat(peerNote.getNoteText(), equalTo("Peer Note"));
+		}
+	}
+
+	@Test
+	public void getPeerNoteWithInvalidNodeIdentifierReturnsNull() throws Exception {
+		FcpConnection fcpConnection = createFcpConnection(message -> {
+			if (message.getName().equals("ListPeerNotes")) {
+				return (listener, connection) -> listener.receivedEndListPeerNotes(connection, new EndListPeerNotes(new FcpMessage("EndListPeerNotes")));
+			}
+			return FcpClientTest::doNothing;
+		});
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			PeerNote peerNote = fcpClient.getPeerNote(createPeer());
+			assertThat(peerNote, nullValue());
 		}
 	}
 
