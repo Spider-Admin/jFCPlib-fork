@@ -52,6 +52,7 @@ import static net.pterodactylus.fcp.test.NodeRefs.createNodeRef;
 import static net.pterodactylus.fcp.test.PeerMatchers.peerWithIdentity;
 import static net.pterodactylus.fcp.test.Peers.createPeer;
 import static net.pterodactylus.fcp.test.Requests.isGetRequest;
+import static net.pterodactylus.fcp.test.Requests.isPutRequest;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.anything;
@@ -626,19 +627,30 @@ public class FcpClientTest {
 
 	@Test
 	public void getGetRequestsReturnsGetRequests() throws IOException, FcpException {
-		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), (listener, connection) -> {
-			listener.receivedPersistentGet(connection, new PersistentGet(new FcpMessage("PersistentGet").put("Identifier", "get1")));
-			listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put1")));
-			listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put2")));
-			listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir1")));
-			listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir2")));
-			listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir3")));
-			listener.receivedEndListPersistentRequests(connection, new EndListPersistentRequests(new FcpMessage("EndListPersistentRequests")));
-		});
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), this::sendRequests);
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
-			Collection<Request> getRequests = fcpClient.getGetRequests(false);
-			assertThat(getRequests, contains(isGetRequest(equalTo("get1"))));
+			Collection<Request> requests = fcpClient.getGetRequests(false);
+			assertThat(requests, contains(isGetRequest(equalTo("get1"))));
 		}
+	}
+
+	@Test
+	public void getPutRequestsReturnsPutRequests() throws IOException, FcpException {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), this::sendRequests);
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			Collection<Request> requests = fcpClient.getPutRequests(false);
+			assertThat(requests, contains(isPutRequest(equalTo("put1")), isPutRequest(equalTo("put2"))));
+		}
+	}
+
+	private void sendRequests(FcpListener listener, FcpConnection connection) {
+		listener.receivedPersistentGet(connection, new PersistentGet(new FcpMessage("PersistentGet").put("Identifier", "get1")));
+		listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put1")));
+		listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put2")));
+		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir1")));
+		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir2")));
+		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir3")));
+		listener.receivedEndListPersistentRequests(connection, new EndListPersistentRequests(new FcpMessage("EndListPersistentRequests")));
 	}
 
 	private static void doNothing(FcpListener listener, FcpConnection connection) {

@@ -17,7 +17,6 @@
 
 package net.pterodactylus.fcp.highlevel;
 
-import com.google.common.base.Predicate;
 import net.pterodactylus.fcp.AddPeer;
 import net.pterodactylus.fcp.AddPeer.Trust;
 import net.pterodactylus.fcp.AddPeer.Visibility;
@@ -80,7 +79,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import static com.google.common.collect.FluentIterable.from;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
@@ -936,12 +934,7 @@ public class FcpClient implements Closeable {
 	 *             if an FCP error occurs
 	 */
 	public Collection<Request> getPutRequests(final boolean global) throws IOException, FcpException {
-		return from(getRequests(global)).filter(new Predicate<Request>() {
-			@Override
-			public boolean apply(Request request) {
-				return request instanceof PutRequest;
-			}
-		}).toList();
+		return getRequests(global).stream().filter(request -> request instanceof PutRequest).collect(toList());
 	}
 
 	/**
