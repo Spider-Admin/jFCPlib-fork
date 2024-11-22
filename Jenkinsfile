@@ -44,7 +44,7 @@ pipeline {
             }
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                sh './mvnw clean verity'
+                sh './mvnw clean verify'
                 }
             }
         }
