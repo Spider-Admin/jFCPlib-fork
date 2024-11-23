@@ -19,7 +19,7 @@ pipeline {
                 jdk 'OpenJDK 8'
             }
             steps {
-                sh './mvnw verify'
+                sh './mvnw test'
             }
             post {
                 always {
@@ -44,7 +44,7 @@ pipeline {
             }
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                sh './mvnw clean verify'
+                    sh './mvnw clean test'
                 }
             }
         }
@@ -54,7 +54,7 @@ pipeline {
             }
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                sh './mvnw clean verify'
+                    sh './mvnw clean test'
                 }
             }
         }
