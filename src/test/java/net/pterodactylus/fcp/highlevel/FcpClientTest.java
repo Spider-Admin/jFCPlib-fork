@@ -712,6 +712,49 @@ public class FcpClientTest {
 		);
 	}
 
+	@Test
+	public void getGetRequestIsCompleteAndFailedWhenGetFailedMessageIsReceived() throws Exception {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::sendGetFailed));
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			Collection<Request> requests = fcpClient.getGetRequests(false);
+			assertThat(requests, contains(isGetRequest(
+					equalTo("get1"),
+					matches("complete", Request::isComplete),
+					matches("failed", Request::hasFailed),
+					matches("fatal", Request::isFatal),
+					matches("error code", m -> m.getErrorCode() == 123)
+			)));
+		}
+	}
+
+	@Test
+	public void getRequestIgnoresGetFailedForUnknownIdentifier() throws Exception {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::sendGetFailedForUnknownIdentifier));
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			Collection<Request> requests = fcpClient.getRequests(true);
+			assertThat(requests, containsInAnyOrder(
+					isRequest(equalTo("get1"), matches("complete", m -> !m.isComplete())),
+					isRequest(equalTo("get1-global"), matches("complete", m -> !m.isComplete())),
+					isRequest(equalTo("put1"), matches("complete", m -> !m.isComplete())),
+					isRequest(equalTo("put1-global"), matches("complete", m -> !m.isComplete())),
+					isRequest(equalTo("put2"), matches("complete", m -> !m.isComplete())),
+					isRequest(equalTo("put2-global"), matches("complete", m -> !m.isComplete()))
+			));
+		}
+	}
+
+	private void sendGetFailed(FcpListener listener, FcpConnection connection) {
+		listener.receivedGetFailed(connection, new GetFailed(
+				new FcpMessage("GetFailed").put("Identifier", "get1").put("Fatal", "true").put("Code", "123"))
+		);
+	}
+
+	private void sendGetFailedForUnknownIdentifier(FcpListener listener, FcpConnection connection) {
+		listener.receivedGetFailed(connection, new GetFailed(
+				new FcpMessage("GetFailed").put("Identifier", "unknown"))
+		);
+	}
+
 	private void sendRequests(FcpListener listener, FcpConnection connection) {
 		listener.receivedPersistentGet(connection, new PersistentGet(new FcpMessage("PersistentGet").put("Identifier", "get1").put("Global", "false")));
 		listener.receivedPersistentPut(connection, new PersistentPut(new FcpMessage("PersistentPut").put("Identifier", "put1").put("Global", "false")));
