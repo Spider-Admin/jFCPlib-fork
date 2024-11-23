@@ -982,6 +982,20 @@ public class FcpClientTest {
 		}
 	}
 
+	@Test
+	public void modifyConfigSendsOptionsInMessage() throws Exception {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ModifyConfig")
+						.and(withField("current.param1", "value1"))
+						.and(withField("default.param2", "value2")),
+				this::sendConfigData);
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			Map<String, String> optionsToModify = new HashMap<>();
+			optionsToModify.put("current.param1", "value1");
+			optionsToModify.put("default.param2", "value2");
+			fcpClient.modifyConfig(optionsToModify);
+		}
+	}
+
 	private void sendConfigData(FcpListener listener, FcpConnection connection) {
 		FcpMessage configData = new FcpMessage("ConfigData");
 		configData.put("current.param1", "value1");
