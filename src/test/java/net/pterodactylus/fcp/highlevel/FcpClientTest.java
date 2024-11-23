@@ -631,7 +631,7 @@ public class FcpClientTest {
 
 	@Test
 	public void getGetRequestsReturnsGetRequests() throws IOException, FcpException {
-		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), this::sendRequests);
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::endListPersistentRequests));
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			Collection<Request> requests = fcpClient.getGetRequests(false);
 			assertThat(requests, contains(isGetRequest(equalTo("get1"))));
@@ -640,7 +640,7 @@ public class FcpClientTest {
 
 	@Test
 	public void getPutRequestsReturnsPutRequests() throws IOException, FcpException {
-		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), this::sendRequests);
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::endListPersistentRequests));
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			Collection<Request> requests = fcpClient.getPutRequests(false);
 			assertThat(requests, contains(isPutRequest(equalTo("put1")), isPutRequest(equalTo("put2"))));
@@ -649,7 +649,7 @@ public class FcpClientTest {
 
 	@Test
 	public void getGetRequestsWithGlobalReturnsGlobalGetRequests() throws IOException, FcpException {
-		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), this::sendRequests);
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::endListPersistentRequests));
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			Collection<Request> requests = fcpClient.getGetRequests(true);
 			assertThat(requests, containsInAnyOrder(isGetRequest(equalTo("get1")), isGetRequest(equalTo("get1-global"))));
@@ -658,7 +658,7 @@ public class FcpClientTest {
 
 	@Test
 	public void getPutRequestsWithGlobalReturnsGlobalPutRequests() throws IOException, FcpException {
-		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), this::sendRequests);
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::endListPersistentRequests));
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			Collection<Request> requests = fcpClient.getPutRequests(true);
 			assertThat(requests, containsInAnyOrder(
@@ -672,7 +672,7 @@ public class FcpClientTest {
 
 	@Test
 	public void getGetRequestsIsCompleteWhenDataFoundMessageIsReceived() throws IOException, FcpException {
-		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::sendDataFound));
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::sendDataFound, this::endListPersistentRequests));
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			Collection<Request> requests = fcpClient.getGetRequests(false);
 			assertThat(requests, contains(isGetRequest(
@@ -686,7 +686,7 @@ public class FcpClientTest {
 
 	@Test
 	public void getRequestsIgnoresDataFoundForUnknownIdentifier() throws IOException, FcpException {
-		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::sendDataFoundForUnknownIdentifier));
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::sendDataFoundForUnknownIdentifier, this::endListPersistentRequests));
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			Collection<Request> requests = fcpClient.getRequests(true);
 			assertThat(requests, containsInAnyOrder(
@@ -714,7 +714,7 @@ public class FcpClientTest {
 
 	@Test
 	public void getGetRequestIsCompleteAndFailedWhenGetFailedMessageIsReceived() throws Exception {
-		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::sendGetFailed));
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::sendGetFailed, this::endListPersistentRequests));
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			Collection<Request> requests = fcpClient.getGetRequests(false);
 			assertThat(requests, contains(isGetRequest(
@@ -729,7 +729,7 @@ public class FcpClientTest {
 
 	@Test
 	public void getRequestIgnoresGetFailedForUnknownIdentifier() throws Exception {
-		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::sendGetFailedForUnknownIdentifier));
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::sendGetFailedForUnknownIdentifier, this::endListPersistentRequests));
 		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
 			Collection<Request> requests = fcpClient.getRequests(true);
 			assertThat(requests, containsInAnyOrder(
@@ -768,6 +768,9 @@ public class FcpClientTest {
 		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir1-global").put("Global", "true")));
 		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir2-global").put("Global", "true")));
 		listener.receivedPersistentPutDir(connection, new PersistentPutDir(new FcpMessage("PersistentPutDir").put("Identifier", "putdir3-global").put("Global", "true")));
+	}
+
+	private void endListPersistentRequests(FcpListener listener, FcpConnection connection) {
 		listener.receivedEndListPersistentRequests(connection, new EndListPersistentRequests(new FcpMessage("EndListPersistentRequests")));
 	}
 
