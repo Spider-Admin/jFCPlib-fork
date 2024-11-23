@@ -21,6 +21,7 @@ import net.pterodactylus.fcp.PersistentPut;
 import net.pterodactylus.fcp.PersistentPutDir;
 import net.pterodactylus.fcp.ProtocolError;
 import net.pterodactylus.fcp.SSKKeypair;
+import net.pterodactylus.fcp.SimpleProgress;
 import net.pterodactylus.fcp.UnknownNodeIdentifier;
 import org.hamcrest.Matcher;
 import org.junit.Rule;
@@ -752,6 +753,53 @@ public class FcpClientTest {
 	private void sendGetFailedForUnknownIdentifier(FcpListener listener, FcpConnection connection) {
 		listener.receivedGetFailed(connection, new GetFailed(
 				new FcpMessage("GetFailed").put("Identifier", "unknown"))
+		);
+	}
+
+	@Test
+	public void getRequestsFillsInDataFromSimpleProgressMessages() throws Exception {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("ListPersistentRequests"), sendRequests(this::sendRequests, this::sendSimpleProgress, this::endListPersistentRequests));
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			Collection<Request> requests = fcpClient.getRequests(false);
+			assertThat(requests, containsInAnyOrder(
+					isRequest(
+							equalTo("get1"),
+							matches("total", m -> m.getTotalBlocks() == 123),
+							matches("required", m -> m.getRequiredBlocks() == 234),
+							matches("failed", m -> m.getFailedBlocks() == 345),
+							matches("fatallyFailed", m -> m.getFatallyFailedBlocks() == 456),
+							matches("succeeded", m -> m.getSucceededBlocks() == 567),
+							matches("finalized", Request::isFinalizedTotal)
+					),
+					isRequest(
+							equalTo("put1"),
+							matches("total", m -> m.getTotalBlocks() == 234),
+							matches("required", m -> m.getRequiredBlocks() == 345),
+							matches("failed", m -> m.getFailedBlocks() == 456),
+							matches("fatallyFailed", m -> m.getFatallyFailedBlocks() == 567),
+							matches("succeeded", m -> m.getSucceededBlocks() == 678),
+							matches("finalized", request -> !request.isFinalizedTotal())
+					),
+					isRequest(equalTo("put2"), matches("total", m -> m.getTotalBlocks() == 0))
+			));
+		}
+	}
+
+	private void sendSimpleProgress(FcpListener listener, FcpConnection connection) {
+		listener.receivedSimpleProgress(connection, createSimpleProgress("get1", 123, 234, 345, 456, 567, true));
+		listener.receivedSimpleProgress(connection, createSimpleProgress("put1", 234, 345, 456, 567, 678, false));
+		listener.receivedSimpleProgress(connection, createSimpleProgress("unknown", 234, 345, 456, 567, 678, false));
+	}
+
+	private SimpleProgress createSimpleProgress(String identifier, int total, int required, int failed, int fatallyFailed, int succeeded, boolean isFinalized) {
+		return new SimpleProgress(new FcpMessage("SimpleProgress")
+				.put("Identifier", identifier)
+				.put("Total", String.valueOf(total))
+				.put("Required", String.valueOf(required))
+				.put("Failed", String.valueOf(failed))
+				.put("FatallyFailed", String.valueOf(fatallyFailed))
+				.put("Succeeded", String.valueOf(succeeded))
+				.put("FinalizedTotal", String.valueOf(isFinalized))
 		);
 	}
 
