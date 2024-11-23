@@ -3,6 +3,7 @@ package net.pterodactylus.fcp.highlevel;
 import net.pterodactylus.fcp.AddPeer.Trust;
 import net.pterodactylus.fcp.AddPeer.Visibility;
 import net.pterodactylus.fcp.AllData;
+import net.pterodactylus.fcp.ConfigData;
 import net.pterodactylus.fcp.DataFound;
 import net.pterodactylus.fcp.EndListPeerNotes;
 import net.pterodactylus.fcp.EndListPeers;
@@ -944,6 +945,54 @@ public class FcpClientTest {
 		FcpMessage nodeData = new FcpMessage("NodeData");
 		copyNodeRefToMessage(createNodeRef()).accept(nodeData);
 		listener.receivedNodeData(connection, new NodeData(nodeData));
+	}
+
+	@Test
+	public void getConfigRequestsAllSections() throws Exception {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("GetConfig")
+						.and(withField("WithCurrent", "true"))
+						.and(withField("WithDefaults", "true"))
+						.and(withField("WithSortOrder", "true"))
+						.and(withField("WithExpertFlag", "true"))
+						.and(withField("WithForceWriteFlag", "true"))
+						.and(withField("WithShortDescription", "true"))
+						.and(withField("WithLongDescription", "true"))
+						.and(withField("WithDataTypes", "true"))
+				, this::sendConfigData);
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			fcpClient.getConfig();
+		}
+	}
+
+	@Test
+	public void getConfigReturnsValuesFromAllSections() throws Exception {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("GetConfig"), this::sendConfigData);
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			Map<String, String> config = fcpClient.getConfig();
+			assertThat(config, allOf(
+					hasEntry("current.param1", "value1"),
+					hasEntry("default.param2", "value2"),
+					hasEntry("sortOrder.param3", "value3"),
+					hasEntry("expertFlag.param4", "value4"),
+					hasEntry("forceWriteFlag.param5", "value5"),
+					hasEntry("shortDescription.param6", "value6"),
+					hasEntry("longDescription.param7", "value7"),
+					hasEntry("dataType.param8", "value8")
+			));
+		}
+	}
+
+	private void sendConfigData(FcpListener listener, FcpConnection connection) {
+		FcpMessage configData = new FcpMessage("ConfigData");
+		configData.put("current.param1", "value1");
+		configData.put("default.param2", "value2");
+		configData.put("sortOrder.param3", "value3");
+		configData.put("expertFlag.param4", "value4");
+		configData.put("forceWriteFlag.param5", "value5");
+		configData.put("shortDescription.param6", "value6");
+		configData.put("longDescription.param7", "value7");
+		configData.put("dataType.param8", "value8");
+		listener.receivedConfigData(connection, new ConfigData(configData));
 	}
 
 	private static void doNothing(FcpListener listener, FcpConnection connection) {
