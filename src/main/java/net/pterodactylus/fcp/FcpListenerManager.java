@@ -551,7 +551,7 @@ public class FcpListenerManager {
 	 * @param sentFeed
 	 *            The “SentFeed” message.
 	 */
-	public void fireSentFeed(SentFeed sentFeed) {
+	public void fireReceivedSentFeed(SentFeed sentFeed) {
 		for (FcpListener fcpListener : getListeners()) {
 			fcpListener.receivedSentFeed(getSource(), sentFeed);
 		}
