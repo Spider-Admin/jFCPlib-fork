@@ -13,6 +13,7 @@ import net.pterodactylus.fcp.FcpListener;
 import net.pterodactylus.fcp.FcpMessage;
 import net.pterodactylus.fcp.FcpUtils;
 import net.pterodactylus.fcp.GetFailed;
+import net.pterodactylus.fcp.NodeData;
 import net.pterodactylus.fcp.NodeHello;
 import net.pterodactylus.fcp.NodeRef;
 import net.pterodactylus.fcp.Peer;
@@ -42,6 +43,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -59,6 +61,7 @@ import static net.pterodactylus.fcp.AddPeer.Visibility.YES;
 import static net.pterodactylus.fcp.test.InputStreamMatchers.streamContaining;
 import static net.pterodactylus.fcp.test.Matchers.hasField;
 import static net.pterodactylus.fcp.test.Matchers.matches;
+import static net.pterodactylus.fcp.test.NodeRefs.copyNodeRefToMessage;
 import static net.pterodactylus.fcp.test.NodeRefs.createNodeRef;
 import static net.pterodactylus.fcp.test.PeerMatchers.peerWithIdentity;
 import static net.pterodactylus.fcp.test.Peers.createPeer;
@@ -904,6 +907,45 @@ public class FcpClientTest {
 		}
 	}
 
+	@Test
+	public void getNodeInformationSetsGiveOpennetRefsOnMessage() throws Exception {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("GetNode").and(withField("GiveOpennetRef", "true")), this::sendNodeData);
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			fcpClient.getNodeInformation(true, false, false);
+		}
+	}
+
+	@Test
+	public void getNodeInformationSetsWithPrivateOnMessage() throws Exception {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("GetNode").and(withField("WithPrivate", "true")), this::sendNodeData);
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			fcpClient.getNodeInformation(false, true, false);
+		}
+	}
+
+	@Test
+	public void getNodeInformationSetsWithVolatileOnMessage() throws Exception {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("GetNode").and(withField("WithVolatile", "true")), this::sendNodeData);
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			fcpClient.getNodeInformation(false, false, true);
+		}
+	}
+
+	@Test
+	public void getNodeInformationReturnsNodeData() throws Exception {
+		FcpConnection fcpConnection = createFcpConnectionReactingToSingleMessage(named("GetNode"), this::sendNodeData);
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			NodeData nodeData = fcpClient.getNodeInformation(false, false, false);
+			assertThat(nodeData.getIdentity(), equalTo("identity"));
+		}
+	}
+
+	private void sendNodeData(FcpListener listener, FcpConnection connection) {
+		FcpMessage nodeData = new FcpMessage("NodeData");
+		copyNodeRefToMessage(createNodeRef()).accept(nodeData);
+		listener.receivedNodeData(connection, new NodeData(nodeData));
+	}
+
 	private static void doNothing(FcpListener listener, FcpConnection connection) {
 		// do nothing.
 	}
@@ -965,6 +1007,10 @@ public class FcpClientTest {
 
 	private static Predicate<FcpMessage> named(String name) {
 		return message -> message.getName().equals(name);
+	}
+
+	private static Predicate<FcpMessage> withField(String name, String value) {
+		return message -> Objects.equals(message.getField(name), value);
 	}
 
 	@Rule
