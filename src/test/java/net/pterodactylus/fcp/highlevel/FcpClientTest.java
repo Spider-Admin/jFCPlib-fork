@@ -7,9 +7,11 @@ import net.pterodactylus.fcp.DataFound;
 import net.pterodactylus.fcp.EndListPeerNotes;
 import net.pterodactylus.fcp.EndListPeers;
 import net.pterodactylus.fcp.EndListPersistentRequests;
+import net.pterodactylus.fcp.FCPPluginReply;
 import net.pterodactylus.fcp.FcpConnection;
 import net.pterodactylus.fcp.FcpListener;
 import net.pterodactylus.fcp.FcpMessage;
+import net.pterodactylus.fcp.FcpUtils;
 import net.pterodactylus.fcp.GetFailed;
 import net.pterodactylus.fcp.NodeHello;
 import net.pterodactylus.fcp.NodeRef;
@@ -29,12 +31,17 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -64,6 +71,7 @@ import static org.hamcrest.Matchers.anything;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThrows;
 
@@ -827,6 +835,73 @@ public class FcpClientTest {
 		return (listener, connection) -> {
 			stream(messageConsumers).forEach(consumer -> consumer.accept(listener, connection));
 		};
+	}
+
+	@Test
+	public void sendPluginMessageAddsParametersCorrectly() throws Exception {
+		Map<String, String> sentParameters = new HashMap<>();
+		FcpConnection fcpConnection = createFcpConnection(message -> {
+			if (message.getName().equals("FCPPluginMessage") && message.getField("PluginName").equals("test.plugin.TestPlugin")) {
+				message.getFields().entrySet().stream()
+						.filter(entry -> entry.getKey().startsWith("Param."))
+						.map(entry -> new SimpleImmutableEntry<>(entry.getKey().replaceFirst("^Param\\.", ""), entry.getValue()))
+						.forEach(entry -> sentParameters.put(entry.getKey(), entry.getValue()));
+				return (listener, connection) -> {
+					listener.receivedFCPPluginReply(connection, new FCPPluginReply(new FcpMessage("FCPPluginReply").put("Identifier", message.getField("Identifier")), null));
+				};
+			}
+			return FcpClientTest::doNothing;
+		});
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			HashMap<String, String> parameters = new HashMap<>();
+			parameters.put("One", "1");
+			parameters.put("Second", "Two");
+			fcpClient.sendPluginMessage("test.plugin.TestPlugin", parameters);
+			assertThat(sentParameters, allOf(hasEntry("One", "1"), hasEntry("Second", "Two")));
+		}
+	}
+
+	@Test
+	public void sendPluginMessageIncludeInputStreamInMessage() throws Exception {
+		FcpConnection fcpConnection = createFcpConnection(message -> {
+			if (message.getName().equals("FCPPluginMessage")) {
+				try (ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
+				     InputStream inputStream = message.getPayloadInputStream()) {
+					FcpUtils.copy(inputStream, byteOutputStream);
+					return (listener, connection) -> {
+						listener.receivedFCPPluginReply(connection, new FCPPluginReply(new FcpMessage("FCPPluginReply").put("Identifier", message.getField("Identifier")).put("Replies.Reply", new String(byteOutputStream.toByteArray(), UTF_8)), null));
+					};
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			}
+			return FcpClientTest::doNothing;
+		});
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			Map<String, String> replies = fcpClient.sendPluginMessage("test.plugin.TestPlugin", new HashMap<>(), 12, new ByteArrayInputStream("Hello World!".getBytes(UTF_8)));
+			assertThat(replies.get("Reply"), equalTo("Hello World!"));
+		}
+	}
+
+	@Test
+	public void sendPluginMessageReturnsParametersFromReplyCorrectly() throws Exception {
+		FcpConnection fcpConnection = createFcpConnection(message -> {
+			if (message.getName().equals("FCPPluginMessage") && message.getField("PluginName").equals("test.plugin.TestPlugin")) {
+				return (listener, connection) -> {
+					listener.receivedFCPPluginReply(connection, new FCPPluginReply(new FcpMessage("FCPPluginReply")
+							.put("Identifier", message.getField("Identifier"))
+							.put("Replies.One", "1")
+							.put("Replies.Second", "Two"),
+							null
+					));
+				};
+			}
+			return FcpClientTest::doNothing;
+		});
+		try (FcpClient fcpClient = new FcpClient(fcpConnection)) {
+			Map<String, String> reply = fcpClient.sendPluginMessage("test.plugin.TestPlugin", new HashMap<>());
+			assertThat(reply, allOf(hasEntry("One", "1"), hasEntry("Second", "Two")));
+		}
 	}
 
 	private static void doNothing(FcpListener listener, FcpConnection connection) {

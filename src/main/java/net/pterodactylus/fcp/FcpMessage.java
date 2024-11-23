@@ -143,6 +143,10 @@ public class FcpMessage implements Iterable<String> {
 		return fields.keySet().iterator();
 	}
 
+	public InputStream getPayloadInputStream() {
+		return payloadInputStream;
+	}
+
 	/**
 	 * Sets the payload input stream of the message.
 	 *
