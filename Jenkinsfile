@@ -19,7 +19,7 @@ pipeline {
                 jdk 'OpenJDK 8'
             }
             steps {
-                sh './mvnw test'
+                sh './mvnw verify'
             }
             post {
                 always {
