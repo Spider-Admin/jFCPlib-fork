@@ -18,9 +18,11 @@
 package net.pterodactylus.fcp;
 
 import java.io.InputStream;
-import java.util.HashMap;
+import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import static java.util.stream.Collectors.toMap;
 
 /**
  * The “FCPPluginReply” is sent by a plugin as a response to a
@@ -94,14 +96,10 @@ public class FCPPluginReply extends BaseMessage implements Identifiable {
 	 * @return All replies from the plugin
 	 */
 	public Map<String, String> getReplies() {
-		Map<String, String> fields = getFields();
-		Map<String, String> replies = new HashMap<String, String>();
-		for (Entry<String, String> field : fields.entrySet()) {
-			if (field.getKey().startsWith("Replies.")) {
-				replies.put(field.getKey().substring(8), field.getValue());
-			}
-		}
-		return replies;
+		return getFields().entrySet().stream()
+				.filter(entry -> entry.getKey().startsWith("Replies."))
+				.map(entry -> new AbstractMap.SimpleImmutableEntry<>(entry.getKey().substring(8), entry.getValue()))
+				.collect(toMap(Entry::getKey, Entry::getValue));
 	}
 
 	/**
